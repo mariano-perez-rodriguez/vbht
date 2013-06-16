@@ -442,8 +442,9 @@ declare -r LOGFILE='vbht'
 declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
 
 # maximum user settable verbosity
-declare -ri MAX_VERB=5
+declare -ri MAX_VERB=6
 # severities/verbosities
+declare -ri SEV_STDERR=6
 declare -ri SEV_DEBUG=5
 declare -ri SEV_INFO=4
 declare -ri SEV_WARNING=3
