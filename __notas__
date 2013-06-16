@@ -30,7 +30,7 @@
 
 - hacer un FIFO para el stderr de los subcomandos (este tiene un "listener" que le agrega un header a cada linea)
 
-- hacer el tema de setear la trap para DEBUG y loguear todo comando que se ejecute (http://mywiki.wooledge.org/BashFAQ/050)
++ hacer el tema de setear la trap para DEBUG y loguear todo comando que se ejecute (http://mywiki.wooledge.org/BashFAQ/050)
 
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien
 
