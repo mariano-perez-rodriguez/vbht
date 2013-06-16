@@ -1,0 +1,19 @@
+# /etc/logrotate.d/vbht.logrotate
+
+# logrotate configuration file for vbht:
+#   - compress rotated logs
+#   - create an empty log after rotation (belonging to root:vboxusers, with them having permission to read and write to it)
+#   - but delay that one rotation cycle (so that we can check the recently rotated logs withoput decompressing them)
+#   - it's OK if the logs are missing
+#   - create the rotated logs in the same directory as the non-rotated ones
+#   - keep 20 rotations
+#   - rotate weekly
+/var/log/vbht/* {
+  compress
+  create 0660 root vboxusers
+  delaycompress
+  missingok
+  noolddir
+  rotate 20
+  weekly
+}

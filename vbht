@@ -1,0 +1,1137 @@
+#! /usr/bin/env bash
+
+##
+## vbht - VirtualBox(R) Host Tools -- kiosk-mode host tools for VirtualBox(R)
+## Copyright (C) 2012  Mariano Perez Rodriguez
+##
+## This program is free software: you can redistribute it and/or modify it
+## under the terms of the GNU Affero General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU Affero General Public License for more details.
+##
+## You should have received a copy of the GNU Affero General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses>.
+##
+
+set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
+set -o nounset  # be merciless about unset variables
+set -o errexit  # exit on ANY error
+
+
+# ==============================================================================
+# == Functions =================================================================
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# -- VirtualBox(R) VM functions ------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Get the UUID corresponding to either a name or a UUID
+# Usage: getUUID { NAME | UUID }
+# Returns: 0 if successful, 1 if errors or none found
+# Outputs: UUID if found, empty otherwise
+getUUID() {
+  # get the list of registered virtual machines
+  local temp=$(vboxmanage list vms 2> /dev/null | grep -e "^\"${1}\"" -e "\{${1}\}\$" 2> /dev/null)
+  # if the denomination is ambiguous, return failure
+  if ! [[ "$(wc -l <<< "$temp" 2> /dev/null)" == '1' ]]; then return 1; fi
+  # extract the UUID from the vm's list
+  temp=$(grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' <<< "${temp}" 2> /dev/null)
+  # and remove redundant "{" and "}"
+  temp=${temp%\}}; temp=${temp#\{}
+  # echo it and return success
+  echo "${temp}"
+}
+
+# Get the address associated to a given USB devpath
+# Usage: devpath2address DEVPATH
+# Returns: 0 if successful, 1 if errors or none found
+# Outputs: UUID if found, empty otherwise
+devpath2address() {
+  # make sure we remove a "/sys" prefix and a "/" suffix from the devpath: we accept
+  # it as input, but there's no need for it
+  local devpath=${1#/sys}; devpath=${devpath%/}; readonly devpath
+  # list host usbs, take only the "Address" lines which match the given devpath,
+  # take only the actual values of those lines,
+  local -r temp=$(vboxmanage list usbhost | grep -e "^Address:[[:space:]]*sysfs:/sys${devpath}//device:/dev/vboxusb/[[:graph:]]*$" | grep -oe '[^[:space:]]*$')
+  # if we found nothing, return failure
+  if ! [[ "${temp}" ]]; then return 1; fi
+  # echo and return success
+  echo "${temp}"
+}
+
+# Wait for a virtual machine to be in "running" state
+# Initially, wait "INIT_DWELL" seconds, then, every "INT_DWELL" seconds,
+# ask for the state of the virtual machine UUID "UUID", up to "MAX_RETRIES"
+# times, exiting if the machine in question is not in "starting" state
+# Usage: waitRunning UUID INIT_DWELL INT_DWELL MAX_TRIES
+# Returns: 0 if successful, 1 if timed out or errors encountered
+# Outputs: nothing
+waitRunning() {
+  local state=''
+  local -i  i=0
+  local -ri l="${4}"
+  # wait initial dwell time
+  sleep -- "${2}s"
+  for (( i = 0; i < l; i++ )); do
+    # get virtual machine's state
+    state=$(vboxmanage showvminfo "${1}" --machinereadable 2> /dev/null | grep -e '^VMState=' | cut -d'"' -f2)
+    # exit successfully if in "running", unsuccessfully if not in "starting"
+    if [[ "${state}" == 'running'  ]]; then return 0; fi
+    if [[ "${state}" != 'starting' ]]; then return 1; fi
+    # wait internal dwell time
+    sleep -- "${3}s"
+  done
+  # we timed out, too bad
+  return 1;
+}
+
+# ------------------------------------------------------------------------------
+# -- VirtualBox(R) misc functions ----------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Get the list of SUPPRESSED VirtualBox(R) warnings
+# Usage: getWarns
+# Returns: 0, if successful
+# Outputs: a sorted, comma-separated list of values
+getWarns() {
+  # get VirtualBox(R)'s warnings, strip the title, turn the comma-separated
+  # list into a newline-separated list, remove empty lines, sort it, and
+  # turn it back into a comma-separated list
+  vboxmanage getextradata global 'GUI/SuppressMessages' 2> /dev/null | cut -d' ' -f2 | tr ',' "\n" | grep . | sort -u | tr "\n" ','
+}
+
+# Set the list of SUPPRESSED VirtualBox(R) warnings
+# Usage: setWarns [WARNING_LIST...]
+# Returns: whatever "vboxmanage setextradata GUI/SuppressMessages" does
+# Outputs: nothing
+#
+# NOTE: WARNING_LIST is a comma-separated list of warnings
+setWarns() {
+  # sort list of options
+  local -r temp=$(IFS=','; tr ',' "\n" <<< "$*" | grep . | sort -u | tr "\n" ',')
+  # set them
+  vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> /dev/null
+}
+
+# ------------------------------------------------------------------------------
+# -- Lock functions ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Try to get a lock on the given lockfile
+# If successful the lockfile will contain the PID of the calling process
+# toghether with any additional strings provided; the file will reside
+# under "/tmp"
+# Usage: getLock FILENAME [STRING...]
+# Returns: 0 if successfully acquired lock, 1 otherwise
+# Outputs: nothing if successful, the PID of the locking process otherwise
+#
+# NOTE: this functions does NOT provide for error hardening, you need
+#       to set traps and remember to remove the lock yourself
+getLock() {
+  local -i otherPID=0
+  local -i i=0
+  # make a copy of the passed args
+  local -a line=("$@")
+  # modify the first output element
+  line[0]="$$"
+  # try at most "LOCKRETRIES" times
+  for (( i = 0; i < LOCKRETRIES; i++ )); do
+    # try to get lock by using the noclobber option
+    if (set -o noclobber; IFS=':'; echo "${line[*]}" > "/tmp/${1}") 2> /dev/null; then return 0; fi
+    # get the locking PID (mask errors, in the VERY unlikely case of the
+    # file being removed prior to this)
+    otherPID=$(head -n1 -- "/tmp/${1}" 2> /dev/null | cut -d':' -f1 2> /dev/null) || true
+    # check for stale
+    if (( otherPID )) && kill -0 -- "${otherPID}" 2> /dev/null; then
+      # the lock is effectively being held by a running process,
+      # echo the locking PID and return error
+      #
+      # NOTE: this does NOT mean that the running process "holding" the
+      #       lock is actually a vbht instance, just that there's one
+      #       with such a PID running
+      echo "${otherPID}"; return 1
+    fi
+    # the process holding the lock is dead, remove lock...
+    rm -f -- "/tmp/${1}" 2> /dev/null
+  done
+  # return failure
+  return 1
+}
+
+# Add a line to the lockfile
+# Usage: addToLock FILENAME [STRING...]
+# Returns: 0 if ok, nonzero on errors
+# Outputs: nothing
+addToLock() {
+  local -r IFS=':'
+  # make a copy of the passed args
+  local -a line=("$@")
+  # modify the first output element
+  line[0]=$$
+  # append to the lockfile
+  echo "${line[*]}" >> "/tmp/${1}" 2> /dev/null
+}
+
+# Read the contents of a lockfile
+# Read the LAST line in the lockfile; use the last line, as the lockfile
+# may have been added to
+# Usage: readLock FILENAME [VAR...]
+# Returns: 0 if successful, 1 if there's no lockfile
+# Outputs: nothing, but it modifies the values of the given variables as
+#          the "read" builtin would
+readLock() {
+  # try to read the given variables
+  IFS=':' read -r ${@:2:${#@}} < <(tail -n1 -- "/tmp/${1}" 2> /dev/null || true)
+}
+
+# ------------------------------------------------------------------------------
+# -- Peripheral functions ------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Disable (every) keyboard and mouse
+# Usage: disableKbdsMice [XID_LIST...]
+# Returns: 0, always
+# Outputs: a sorted, comma-separated list of disabled XIDs
+#
+# NOTE: XID_LIST is a comma-separated list of XIDs
+disableKbdsMice() {
+  local -r IFS=','
+  local xids=''
+  # if no arguments, disable ALL keyboards and mice
+  if (( $# )); then
+    # sort the given XIDs, and, on the one hand, disable them, and on the
+    # other concatenate them into a comma-terminated list of XIDs
+    # @DEBUG: xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
+  else
+    # get the list slave keyboard and pointer XIDs, sort them, and, on the
+    # one hand, disable them, and on the other concatenate them into a
+    # comma-terminated list of XIDs
+    # @DEBUG: xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
+  fi
+  # output the list
+  echo "${xids%,}"
+}
+
+# Enable (every) keyboard and mouse
+# Usage: enableKbdsMice [XID_LIST...]
+# Returns: 0, always
+# Outputs: a sorted, comma-separated list of enabled XIDs
+#
+# NOTE: XID_LIST is a comma-separated list of XIDs
+enableKbdsMice() {
+  local -r IFS=','
+  local xids=''
+  # if no arguments, enable ALL keyboards and mice
+  if (( $# )); then
+    # sort the given XIDs, and, on the one hand, enable them, and on the
+    # other concatenate them into a comma-terminated list of XIDs
+    # @DEBUG: xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
+  else
+    # get the list slave keyboard and pointer XIDs, sort them, and, on the
+    # one hand, enable them, and on the other concatenate them into a
+    # comma-terminated list of XIDs
+    # @DEBUG: xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
+  fi
+  # output the list
+  echo "${xids%,}"
+}
+
+# List USB keyboard UUIDs
+# Usage: lsKbds
+# Returns: 0 always
+# Outputs: a comma-separated list of USB keyboards' UUIDs
+lsKbds() {
+  local -r IFS=','
+  # translate the addresses generated by:
+  #   looking under "/sys/bus/usb/devices" for directory links which contain a
+  #     "modalias" file such that its contents start with "usb:" and end in
+  #     "ic03isc..ip01" (Interface Class == 03, Interface SubClass == whatever,
+  #     Interface Protocol == 01),
+  #   keep only the path of the parent of the target of such a directory link
+  # into UUIDs
+  local -r temp=($(devpath2address "$(find /sys/bus/usb/devices -execdir grep -sq '^usb:.*ic03isc..ip01$' '{}/modalias' ';' -execdir readlink -e '{}/..' ';')"))
+
+  # output the list
+  echo "${temp[*]}"
+}
+
+# ------------------------------------------------------------------------------
+# -- Log functions -------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+
+
+# Variables for terminal requests (http://mywiki.wooledge.org/BashFAQ/037)
+[[ -t 2 ]] && {
+  bold=$(   tput bold  || tput md) # Start bold
+  blink=$(  tput blink || tput mb) # Start blinking
+  stout=$(  tput smso  || tput so) # Start stand-out
+  estout=$( tput rmso  || tput se) # End   stand-out
+  italic=$( tput sitm  || tput ZH) # Start italic
+  eitalic=$(tput ritm  || tput ZR) # End   italic
+  under=$(  tput smul  || tput us) # Start underline
+  eunder=$( tput rmul  || tput ue) # End   underline
+
+  [[ ${TERM} != *-m ]] && {
+    red=$(    tput setaf 1 || tput AF 1)
+    green=$(  tput setaf 2 || tput AF 2)
+    yellow=$( tput setaf 3 || tput AF 3)
+    blue=$(   tput setaf 4 || tput AF 4)
+    magenta=$(tput setaf 5 || tput AF 5)
+    cyan=$(   tput setaf 6 || tput AF 6)
+    white=$(  tput setaf 7 || tput AF 7)
+  }
+
+  default=$(tput op)
+
+  alt=$( tput smcup || tput ti) # Start alt display
+  ealt=$(tput rmcup || tput te) # End   alt display
+
+  reset=$(tput sgr0  || tput me) # Reset cursor
+  hide=$( tput civis || tput vi) # Hide  cursor
+  show=$( tput cnorm || tput ve) # Show  cursor
+  save=$( tput sc              ) # Save  cursor
+  load=$( tput rc              ) # Load  cursor
+
+} 2> /dev/null ||:
+
+# escribir funciones que:
+# - dado un string y un color, escriban un string que echo podria imprimir en ese color
+# - dados dos strings, imprimen uno si stderr es una tty y el otro si no
+
+
+# Write to the logfile and, optionally, to stderr
+# Write the provided arguments to the LOGFILE, assuming a given SEVERITY
+# and, depending on the value of "verbosity", output STRING... to stderr
+# Usage: log LOGFILE SEVERITY [STRING...]
+# Returns: 0, always
+# Outputs: depending on settings, it may output STRING... to stderr
+log() {
+  # get log file name and severity
+  local -r logfile="${1}"
+  local -i severity="${2}"
+  # get string parameters
+  shift 2
+  local temp="$@"
+
+  # prepend severity type string to output line (don't do anything for
+  # unrecognised severities)
+  if   (( severity == 1 )); then temp="Fatal: ${temp}"
+  elif (( severity == 2 )); then temp="Error: ${temp}"
+  elif (( severity == 3 )); then temp="Warning: ${temp}"
+  elif (( severity == 4 )); then temp="Info: ${temp}"
+  elif (( severity == 5 )); then temp="Debug: ${temp}"
+  fi
+
+  # if verbosity mandates, show to stderr
+  if (( severity <= verbosity )); then echo "${temp}" >&2; fi
+  # write to the log file
+  echo "[${prevRUNHASH:-RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${temp}" >> "/var/log/vbht/${logfile}"
+}
+
+# ------------------------------------------------------------------------------
+# -- Misc functions ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Start print-listening on the given directory in the background
+# The given DIRECTORY is created (if not already existing), and, upon file
+# creation, the file in question is fed to "lpr" for printing; the printListener
+# will commit suicide if DIRECTORY is erased (and is the ONLY way of safely
+# and cleanly terminating the printListener).
+# Usage: printListener DIRECTORY [&]
+# Returns: 1 in case of errors, IT DOES NOT RETURN IF SUCCESSFUL (it will be
+#          listening for files to print, no time to return at all); thus the
+#          preferred background terminator in "Usage"
+# Outputs: nothing
+# Taken from: https://github.com/rvoicilas/inotify-tools/issues/5#issuecomment-17756009
+printListener() {
+  local -i ret=0
+  # get the canonical path to the directory and create it if it doesn't exist
+  local -r dir=$(readlink -m -- "${1}" 2> /dev/null); mkdir -p "${dir}"
+
+  # (safely) ignore SIGPIPE
+  trap ':' SIGPIPE
+  # launch inotifywait in monitor mode, listening to "close_write" (in order
+  # to get notified when a file is created) and "delete_self" (in order to be
+  # able of self-termination) events, and reporting both the file affected,
+  # and the event,
+  inotifywait -qme close_write,delete_self --format '%e %f' -- "${dir}" 2> /dev/null |
+  # and read each line in turn (turn event into all-caps in order to avoid problems)
+  while IFS=' ' read -r event file; do event="${event^^}"
+    # in case the directory being listened to gets deleted, signal SIGPIPE to
+    # all of processes in this process group and exit
+    if [[ "${event}" == 'DELETE_SELF' ]]; then kill -s SIGPIPE 0; exit 0; fi
+    # verify we actually have a (readable) file
+    if ! [[ -r "${dir}/${file}" ]]; then continue; fi
+    # verify the file is actually a PDF one
+    temp=${file:(-4)}; temp=${file^^}; if [[ "${temp}" == '.PDF' ]]; then
+      # print the recently created file without a banner and deleting it
+      # when done (if there are errors, log them)
+      (
+        if lp -c "${dir}/${file}"; then
+          log "${LOGFILE}" ${SEV_ERROR} "lp returned non-zero ($?) status"
+        else
+          rm -f -- "${dir}/${file}"
+        fi
+      ) & disown %1
+    else
+      # otherwise, just remove it, we don't care for it
+      rm -f "${dir}/${file}" > /dev/null 2> /dev/null
+    fi
+  done
+  # return SEGPIPE trap to normal
+  trap SIGPIPE
+  # make sure we remove the directory and return error
+  rm -rf "${dir}"; return 1
+}
+
+# ==============================================================================
+# == Constants =================================================================
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# -- Lock-related constants ----------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# lockfile name
+declare -r LOCKFILE='vbht'
+
+# maximum lockfile read retries
+declare -ri LOCKRETRIES=7
+
+# ------------------------------------------------------------------------------
+# -- Log-related constants -----------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# logfile name
+declare -r LOGFILE='vbht'
+
+# hash for this script's run
+declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
+
+# maximum user settable verbosity
+declare -ri MAX_VERB=5
+# severities/verbosities
+declare -ri SEV_DEBUG=5
+declare -ri SEV_INFO=4
+declare -ri SEV_WARNING=3
+declare -ri SEV_ERROR=2
+declare -ri SEV_FATAL=1
+# "other" is used to signify no pre-format is to be applied
+declare -ri SEV_OTHER=0
+
+# ------------------------------------------------------------------------------
+# -- Synchronization constants -------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# initial dwell time used to attach keyboards
+declare -ri KBDATTACHINIDWELL=5
+
+# maximum number of tries for attaching keyboards
+declare -ri KBDATTACHMAXTRIES=20
+
+# dwell time between keyboard attachment tries
+declare -ri KBDATTACHINTDWELL=2
+
+# ------------------------------------------------------------------------------
+# -- Misc constants ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# the actual home directory (valid for root under udev too)
+declare -r HOME=${HOME:-/root}
+
+# print directory name
+declare -r PRINTDIR="${HOME}/.vbht-print"
+
+# ignored VirtualBox(R) warnings
+declare -r IGNOREWARNINGS='confirmGoingFullscreen,confirmGoingSeamless,confirmInputCapture,confirmVMReset,remindAboutAutoCapture,remindAboutGoingFullscreen,remindAboutGoingSeamless,remindAboutInputCapture,remindAboutMouseIntegrationOff,remindAboutMouseIntegrationOn,remindAboutPausedVMInput,remindAboutWrongColorDepth,showRuntimeError.warning.HostAudioNotResponding'
+
+
+# ==============================================================================
+# == Option variables ==========================================================
+# ==============================================================================
+
+# when this variable is non empty we've chanced upon errors
+#  'S'  errors occurred, but be silent about it
+#  'X'  errors occurred which need reporting
+declare -u errors=''
+
+# action to be taken
+#  'S'  start
+#  'A'  attach
+#  'F'  forward
+#  'I'  info
+#  'X'  stop
+declare -u action=''
+
+# type of stoppage
+#  'A'  ACPI off
+#  'O'  power off  (default)
+#  'R'  reset
+#  'S'  save state
+#  'L'  ACPI sleep
+declare -u stop_method='O'
+
+# whether to enable auto attachment
+#  'Y'  enable auto-attachment  (default)
+#  'N'  disable auto-attachment
+#  'E'  auto-attachment has been disabled due to errors
+declare -u auto_attach='Y'
+
+# whether to enable (USB) keyboard attachment
+#  'Y'  enable keyboard attachment  (default)
+#  'N'  disable keyboard attachment
+#  'E'  keyboard attachment has been disabled due to errors
+declare -u attach_keyboard='Y'
+
+# whether to forward ACPI (power/sleep button) events
+#  'Y'  forward ACPI events  (default)
+#  'N'  don't forward ACPI events
+#  'E'  forwarding ACPI events has been disabled due to errors
+declare -u acpi_forward='Y'
+
+# whether to launch the print listening service
+#  'Y'  launch print listener  (default)
+#  'N'  con't launch print listener
+#  'E'  launching of print listener has been disabled due to errors
+declare -u launch_print_listener='Y'
+
+# whether to use a new instance of the X server
+#  'Y'  use a new instance of the X server  (default)
+#  'N'  don't use a new instance of the X server
+#  'E'  using a new instance has been disabled due to errors
+declare -u use_new_X='Y'
+
+# whether info should be shown in machine readable format
+#  'Y'  show info in machine readable format
+#  'N'  don't show info in machine readable format  (default)
+declare -u info_machine_readable='N'
+
+# minimum severity to report to stderr
+declare -i verbosity=2
+
+
+# ==============================================================================
+# == General variables =========================================================
+# ==============================================================================
+
+# the UID of the (to be) capturing VM
+declare -i vmUID=0
+# the UUID of the (to be) capturing VM
+declare -l vmUUID=''
+# the ACPI event to be forwarded
+declare -l acpiEvent=''
+# the previous RUNHASH
+prevRUNHASH=''
+
+# the PID of the process holding the lock
+declare -i lockingPID=0
+# current VirtualBox(R)'s PID
+declare -i vbPID=0
+# the PID of the (to be) capturing VM
+declare -i vmPID=0
+
+# the address of the (to be) attached USB device
+address=''
+# previous VirtualBox(R) warnings
+warns=''
+# disabled input devices list
+indevs=''
+
+# used to construct evaluatable lines
+line=''
+# used to hold return values in general
+declare -i ret=0
+
+# generic temporary
+temp=''
+# generic iterator
+declare -i i=0
+
+
+# ==============================================================================
+# == Arguments check ===========================================================
+# ==============================================================================
+
+log "${LOGFILE}" ${SEV_DEBUG} 'VBHT started'
+
+# we must have at least one argument
+if (( $# == 0 )); then log "${LOGFILE}" ${SEV_ERROR} 'no arguments provided!'; errors='X'
+else
+  # check for `--help' argument
+  if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
+    cat <<'EOM'
+Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
+               [ --auto-attach ]    [ --no-auto-attach ]
+               [ --kbd-attach ]     [ --no-kbd-attach ]
+               [ --acpi-forward ]   [ --no-acpi-forward ]
+               [ --print-listener ] [ --no-print-listener ]
+               [ --new-X ]          [ --no-new-X ]
+   or: vbht attach DEVPATH
+   or: vbht forward { power | sleep }
+   or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
+   or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
+
+common options: [ -qv ] [ --quiet ] [ --verbose ]
+
+   or: vbht { -h | --help }
+   or: vbht { -V | --version }
+   or: vbht { -L | --license }
+
+Launch VirtualBox(R) virtual machines in `capturing' mode, thus effectively
+implementing `kiosk mode', allowing for transparent printing, keyboard jailing,
+and USB auto-attachment.
+
+      -A, --auto-attach        automatically attach USB devices plugged in
+                               during the operation of the virtual machine,
+                               additionally, allow them to be attached through
+                               vbht
+      -a, --no-auto-attach     do NOT automatically attach USB devices plugged
+                               in during the operation of the virtual machine,
+                               nor permit them to be attached through vbht
+      -K, --kbd-attach         try to attach USB keyboards
+      -k, --no-kbd-attach      do NOT try to attach USB keyboards
+      -F, --acpi-forward       forward ACPI power-button / sleep-button events
+                               to the virtual machine
+      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual
+                               machine
+      -P, --print-listener     run the print listening script
+      -p, --no-print-listener  do NOT run the print listening script
+      -X, --new-X              launch a fresh X server
+      -x, --no-new-X           do NOT launch a fresh X server
+
+      -M, --machine-readable     generate output in machine readable format
+      -m, --no-machine-readable  generate output in human readable format
+
+      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine
+      -o, --off    turn the capturing virtual machine off
+      -r, --reset  reset the capturing virtual machine
+      -s, --save   save the capturing virtual machine's state
+      -l, --sleep  send ACPI sleep signal to the capturing virtual machine
+
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      -h, --help     display this help and exit
+      -V, --version  output version information and exit
+      -L, --license  display the GNU Affero General Public License and exit
+
+Actions: the first argument to vbht must be either `--help', `--version',
+  `--license', or an ACTION, ie. one of: `start', `attach', `forward', `info',
+  or `stop'.
+
+      start    start the virtual machine NAME or UUID in capturing mode
+      attach   attach the (USB) device found at DEVPATH to the virtual machine
+               currently running in capturing mode
+      forward  forward an ACPI (power/sleep) event to the capturing virtual
+               machine, this action is completely silent (ie. no output is
+               generated to either stdout or stderr) when no errors
+      info     return information about the virtual machine currently running
+               in capturing mode (if there's one such machine)
+      stop     stop the virtual machine currently running in capturing mode
+
+Examples (`>' stands for the shell prompt):
+
+    > vbht start 'My VM' --no-print-listener --no-auto-attach
+
+    > vbht attach /devices/pci0123:45/6789:01:23.4/usb5/6-7
+
+    > vbht info --machine-readable
+    12345:67890:01234567-89ab-cdef-0123-4567890abcde:HASH:N:Y:N:Y:Y
+
+    > vbht stop --acpi
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if no capturing virtual machines found.
+
+
+NOTES:
+  1. if more than one conflicting option is given (eg. more than one stop type),
+     the last one takes precedence (this does NOT apply to verbosity options),
+  2. verbosity options, if at all given, MUST follow an action and, if the
+     action so requires, its argument; they may be repeated multiple times,
+  3. the DEVPATH argument has the same syntax as udev's `$devpath' or `%p'
+     replaceable parameter (see UDEV(7)).
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: mariano.perez.rodriguez@gmail.com
+EOM
+    # just be obnoxious about `--help' not being the only argument given :P
+    if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} "\`--help' is supposed to be the ONLY argument given!"; fi
+    exit 0
+  fi
+
+  # check for `--version' argument
+  if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
+    cat <<'EOM'
+vbht 0.3
+Copyright (C) 2012 Mariano Perez Rodriguez
+License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: mariano.perez.rodriguez@gmail.com
+EOM
+    # just be obnoxious about `--version' not being the only argument given :P
+    if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} "\`--version' is supposed to be the ONLY argument given!"; fi
+    exit 0
+  fi
+
+  # check for `--license' argument
+  if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
+    /usr/bin/env pager /opt/vbht/agplv3
+    # just be obnoxious about `--license' not being the only argument given :P
+    if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} "\`--license' is supposed to be the ONLY argument given!"; fi
+    exit 0
+  fi
+
+  # process action parameter
+  case "${1}" in
+    'start')
+      action='S'
+      # check for too few arguments
+      if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} 'too few arguments!'; errors='X'
+      else
+        # save the argument
+        vmUUID="${2}"
+        # get optional arguments
+        shift 2
+        while (( $# )); do
+          case "${1}" in
+            # check for each long option
+            '--auto-attach'   ) auto_attach='Y'           ;; '--no-auto-attach'   ) auto_attach='N'           ;;
+            '--kbd-attach'    ) attach_keyboard='Y'       ;; '--no-kbd-attach'    ) attach_keyboard='N'       ;;
+            '--acpi-forward'  ) acpi_forward='Y'          ;; '--no-acpi-forward'  ) acpi_forward='N'          ;;
+            '--print-listener') launch_print_listener='Y' ;; '--no-print-listener') launch_print_listener='N' ;;
+            '--new-X'         ) use_new_X='Y'             ;; '--no-new-X'         ) use_new_X='Y'             ;;
+            # check for verbosity options
+            '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
+            # check for short options
+            -*)
+              # process each in turn
+              for (( i = 1; i < ${#1}; i++ )); do
+                case "${1:$i:1}" in
+                  'A') auto_attach='Y'           ;; 'a') auto_attach='N'           ;;
+                  'K') attach_keyboard='Y'       ;; 'k') attach_keyboard='N'       ;;
+                  'F') acpi_forward='Y'          ;; 'f') acpi_forward='N'          ;;
+                  'P') launch_print_listener='Y' ;; 'p') launch_print_listener='N' ;;
+                  'X') use_new_X='Y'             ;; 'x') use_new_X='Y'             ;;
+                  # check for verbosity options
+                  'q') (( verbosity-- )) || true ;; 'v') (( verbosity++ )) || true ;;
+                  # invalid option
+                  *) log "${LOGFILE}" ${SEV_ERROR} "invalid option at \`${1}'! -- \`${1:$i:1}'"; errors='X' ;;
+                esac
+              done
+            ;;
+            # invalid option
+            *) log "${LOGFILE}" ${SEV_ERROR} "invalid option! -- \`${1}'"; errors='X' ;;
+          esac
+          # shift the processed parameter out
+          shift 1
+        done
+      fi
+    ;;
+    'attach')
+      action='A'
+      # check for too few arguments
+      if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} 'too few arguments!'; errors='X'
+      else
+        # save the argument
+        address="${2}"
+        # get optional arguments
+        shift 2
+        while (( $# )); do
+          case "${1}" in
+            # check for verbosity options
+            '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
+            # check for short options
+            -*)
+              # process each in turn
+              for (( i = 1; i < ${#1}; i++ )); do
+                case "${1:$i:1}" in
+                  # check for verbosity options
+                  'q') (( verbosity-- )) || true ;; 'v') (( verbosity++ )) || true ;;
+                  # invalid option
+                  *) log "${LOGFILE}" ${SEV_ERROR} "invalid option at \`${1}'! -- \`${1:$i:1}'"; errors='X' ;;
+                esac
+              done
+            ;;
+            # invalid option
+            *) log "${LOGFILE}" ${SEV_ERROR} "invalid option! -- \`${1}'"; errors='X' ;;
+          esac
+          # shift the processed parameter out
+          shift 1
+        done
+      fi
+    ;;
+    'forward')
+      action='F'
+      # check for too few arguments
+      if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} 'too few arguments!'; errors='X'
+      else
+        # save the argument
+        acpiEvent="${2}"
+        # yell about too many arguments
+        if (( $# != 2 )); then log "${LOGFILE}" ${SEV_WARNING} "additional arguments ignored! -- \`${@:3}'"; fi
+      fi
+    ;;
+    'info')
+      action='I'
+      # get optional arguments
+      shift 1
+      while (( $# )); do
+        case "${1}" in
+          # check for long options
+          '--machine-readable') info_machine_readable='Y' ;; '--no-machine-readable') info_machine_readable='N' ;;
+          # check for verbosity options
+          '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
+          # check for short options
+          -*)
+            # process each in turn
+            for (( i = 1; i < ${#1}; i++ )); do
+              case "${1:$i:1}" in
+                'M') info_machine_readable='Y' ;; 'm') info_machine_readable='N' ;;
+                # check for verbosity options
+                'q') (( verbosity-- )) || true ;; 'v') (( verbosity++ )) || true ;;
+                # invalid option
+                *) log "${LOGFILE}" ${SEV_ERROR} "invalid option at \`${1}'! -- \`${1:$i:1}'"; errors='X' ;;
+              esac
+            done
+          ;;
+          # invalid option
+          *) log "${LOGFILE}" ${SEV_ERROR} "invalid option! -- \`${1}'"; errors='X' ;;
+        esac
+        # shift the processed parameter out
+        shift 1
+      done
+    ;;
+    'stop')
+      action='X'
+      # get optional arguments
+      shift 1
+      while (( $# )); do
+
+        case "${1}" in
+          # check for each options
+          '--acpi' ) stop_method='A' ;;
+          '--off'  ) stop_method='O' ;;
+          '--reset') stop_method='R' ;;
+          '--save' ) stop_method='S' ;;
+          '--sleep') stop_method='L' ;;
+          # check for verbosity options
+          '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
+          # check for short options
+          -*)
+            # process each in turn
+            for (( i = 1; i < ${#1}; i++ )); do
+              case "${1:$i:1}" in
+                'a') stop_method='A' ;;
+                'o') stop_method='O' ;;
+                'r') stop_method='R' ;;
+                's') stop_method='S' ;;
+                'l') stop_method='L' ;;
+                # check for verbosity options
+                'q') (( verbosity-- )) || true ;; 'v') (( verbosity++ )) || true ;;
+                # invalid option
+                *) log "${LOGFILE}" ${SEV_ERROR} "invalid option at \`${1}'! -- \`${1:$i:1}'"; errors='X' ;;
+              esac
+            done
+          ;;
+          # invalid option
+          *) log "${LOGFILE}" ${SEV_ERROR} "invalid option! -- \`${1}'"; errors='X' ;;
+        esac
+        # shift the processed parameter out
+        shift 1
+      done
+    ;;
+    *) log "${LOGFILE}" ${SEV_ERROR} "invalid action! -- \`$1'"; errors='X' ;;
+  esac
+fi
+
+# in case of errors, show info and exit
+if [[ "${errors}" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 1; fi
+
+# fix up verbosity
+if (( verbosity > MAX_VERB )); then verbosity=${MAX_VERB}; fi
+if (( verbosity < 0        )); then verbosity=0          ; fi
+
+# prevent accidental modification
+readonly action
+readonly verbosity
+
+# ==============================================================================
+# == Actual work ===============================================================
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# -- Start ---------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+if [[ "${action}" == 'S' ]]; then
+  #
+  # vmUUID: user provided UUID or name
+  #
+  # auto_attach          : 'Y' / 'N'
+  # attach_keyboard      : 'Y' / 'N'
+  # acpi_forward         : 'Y' / 'N'
+  # launch_print_listener: 'Y' / 'N'
+  # use_new_X            : 'Y' / 'N'
+  #
+
+  # set common variables
+  vmUID="${UID}"
+  # verify that vmUUID refers to an actual virtual machine (mask errors,
+  # we're going to check for emptiness of "vmUUID")
+  temp="${vmUUID}"; vmUUID=$(getUUID ${vmUUID}) || true
+  # fail if not a valid virtual machine specification
+  if ! [[ "${vmUUID}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid virtual machine specification! -- \`${temp}'"; errors='X'
+  else
+    # try to get lock (mask errors, we're going to check the output)
+    lockingPID=$(getLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}") || true
+    # if there's another process using the lock, fail
+    if (( lockingPID )); then log "${LOGFILE}" ${SEV_ERROR} "another process is holding the lock with PID ${lockingPID}!"; errors='X'
+    else
+      # save VirtualBox(R)'s ignored warnings
+      warns=$(getWarns)
+      # try to set ignored warnings, and fail if we couldn't
+      if setWarns "${IGNOREWARNINGS}"; then
+        log "${LOGFILE}" ${SEV_ERROR} "setting ignored warnings returned non-zero ($?) status, keyboard attachment disabled!"; errors='X'
+        # if warnings could not be disabled, disable keyboard attachment
+        attach_keyboard='E'
+        # tell the lockfile about it
+        addToLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+      fi
+
+      # if we have to launch the print listener, do that now
+      if [[ "${launch_print_listener}" == 'Y' ]]; then
+        # launch the print listener in background
+        printListener "${HOME}/${PRINTDIR}" &
+      fi
+
+      # if we're going to attach keyboards disable input devices now
+      # (in order to avoid unusable virtual machines)
+      if [[ "${attach_keyboard}" == 'Y' ]]; then
+        # try to disable input devices
+        ret=0; indevs=$(disableKbdsMice) || ret=$?
+        if (( ret )); then
+          # if disabling failed, yell
+          log "${LOGFILE}" ${SEV_ERROR} 'disabling input devices (${indevs}) failed, keyboards will NOT be attached!'; errors='X'
+          attach_keyboard='E'
+          # tell the lockfile about it
+          addToLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+        fi
+      fi
+
+      # start building launch line
+      line="VirtualBox --startvm '${vmUUID}'"
+      # prepend it with the "openx" wrapper if a new instance of the X server is
+      # to be run, additionally, add a "--fullscreen" modifier
+      if [[ "${use_new_X}" == 'Y' ]]; then line="sudo -Hn -- /opt/vbht/openx -n ${line} --fullscreen"; fi
+      # finish building launch line
+      line="${line} --no-debug --no-startvm-errormsgbox --start-running 2> /dev/null"
+      # evaluate launch line (no point in checking exit code, as the line is run
+      # in the background) and get its PID
+      eval -- "${line}" & vbPID=$!
+
+      # wait for the VM to become available, recover if it timed out
+      if ! waitRunning "${vmUUID}" "${KBDATTACHINIDWELL}" "${KBDATTACHINTDWELL}" "${KBDATTACHMAXTRIES}"; then
+        log "${LOGFILE}" ${SEV_WARNING} 'could not wait for virtual machine to start up, keyboard attachment will NOT be available!'; errors='X'
+        # disable keyboard attachment
+        attach_keyboard='E'
+        # tell the lockfile about it
+        addToLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+      fi
+
+      # machine is in "running" state, attach keyboards if need be
+      if [[ "${attach_keyboard}" == 'Y' ]]; then
+        # try to attach every keyboard
+        ret=0; lsKbds | tr ',' "\n" | xargs -rn1 -I{} vboxmanage controlvm "${vmUUID}" usbattach '{}' 2> /dev/null || ret=$?
+        # if there were errors, just yell, not much we can do now
+        if (( ret )); then log "${LOGFILE}" ${SEV_ERROR} 'keyboard attachment failed for at least one device!'; errors='X'; fi
+      fi
+
+      # if we disabled input devices, re-enable them now
+      if [[ "${indevs}" ]]; then
+        # try to re-enable input devices
+        if enableKbdsMice "${indevs}" > /dev/null; then
+          # if re-enabling failed, yell and try to re-enable all of them
+          log "${LOGFILE}" ${SEV_ERROR} 're-enabling input devices failed, trying to re-enable them all!'; errors='X'
+          if ! enableKbdsMice > /dev/null; then log "${LOGFILE}" ${SEV_ERROR} 're-enabling all input devices failed!'; errors='X'; fi
+        fi
+      fi
+
+      # wait for the virtual machine to finish (or be finished)
+      wait "${vbPID}"
+
+      # kill the print listener (by removing the print directory)
+      rm -rf -- "${PRINTDIR}"
+
+      # try to restore ignored warnings, if the command failed, at least
+      # let the user know which were the original warnings
+      if setWarns "${warns}"; then log "${LOGFILE}" ${SEV_WARNING} "restoring ignored warnings returned non-zero ($?) status! -- \`${warns}'"; fi
+
+      # free lock file
+      rm -f -- "${LOCKFILE}"
+    fi
+  fi
+
+# ------------------------------------------------------------------------------
+# -- Attach --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+elif [[ "${action}" == 'A' ]]; then
+  #
+  # $address: devpath to attach
+  #
+
+  # try to read the lock file's line
+  if ! readLock "${LOCKFILE}" _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
+    log "${LOGFILE}" ${SEV_ERROR} 'no capturing virtual machine running!'; errors='X'
+  else
+    # if the machine doesn't accept attachments, fail
+    if [[ "${auto_attach}" == 'N' || "${auto_attach}" == 'E' ]]; then log "${LOGFILE}" ${SEV_ERROR} 'the capturing virtual machine does not accept attachments!'; errors='X'
+    else
+      # check if the user may attach to the capturing virtual machine
+      if (( ( UID != vmUID ) && UID )); then log "${LOGFILE}" ${SEV_ERROR} "you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+      else
+        # start building "attach" line
+        line="vboxmanage controlvm '${vmUUID}' usbattach"
+        # prepend "sudo" prefix
+        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
+
+        # get an address from the devpath (mask errors)
+        temp="${address}"; address=$(devpath2address "${address}") || true
+        # show error if not a valid DEVPATH
+        if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${temp}'"; errors='X'
+        else
+          # evaluate attach line and report non-zero status
+          ret=0; eval -- "${line} '${address}' 2> /dev/null" || ret=$?
+          if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${temp}' at address \`${address}' returned non-zero (${ret}) status!"; fi
+        fi
+      fi
+    fi
+  fi
+
+# ------------------------------------------------------------------------------
+# -- Forward -------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+elif [[ "${action}" == 'F' ]]; then
+  #
+  # $acpiEvent: event to forward
+  #
+
+  # try to read the lock file's line
+  if ! readLock "${LOCKFILE}" _ vmUID vmUUID prevRUNHASH _ acpi_forward _ _ _; then errors='S'; else
+    # if the machine doesn't accept ACPI forwarding, fail
+    if [[ "${acpi_forward}" == 'N' || "${acpi_forward}" == 'E' ]]; then errors='S'; else
+      # check if the user may forward ACPI events to the capturing virtual machine
+      if (( ( UID != vmUID ) && UID )); then errors='S'; else
+        # start building "forward" line
+        line="vboxmanage controlvm '${vmUUID}'"
+        # prepend "sudo" prefix
+        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
+
+        # finish building the "forward" line
+        if   [[ "${acpiEvent}" == 'power' ]]; then line="${line} acpipowerbutton"
+        elif [[ "${acpiEvent}" == 'sleep' ]]; then line="${line} acpisleepbutton"
+        # if the event is not recognized, just fail
+        else errors='S'; fi
+
+        # only try to evaluate well formed forward lines
+        if [[ "${errors}" == '' ]]; then
+          # evaluate forward line and report non-zero status
+          if ! eval -- "${line} 2> /dev/null"; then errors='S'; fi
+        fi
+      fi
+    fi
+  fi
+
+# ------------------------------------------------------------------------------
+# -- Info ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+elif [[ "${action}" == 'I' ]]; then
+  #
+  # info_machine_readable: 'Y' / 'N'
+  #
+
+  # try to read the lock file's line
+  if ! readLock "${LOCKFILE}" vmPID vmUID vmUUID prevRUNHASH auto_attach attach_keyboard acpi_forward launch_print_listener use_new_X; then
+    if [[ "${info_machine_readable}" == 'Y' ]]; then echo ''; else echo 'No capturing virtual machine running.'; fi
+  else
+    if [[ "${info_machine_readable}" == 'Y' ]]; then
+      echo "${vmPID}:${vmUID}:${vmUUID}:${prevRUNHASH}:${auto_attach}:${attach_keyboard}:${acpi_forward}:${launch_print_listener}:${use_new_X}"
+    else
+      # write formatted output to stdout
+      echo "Capturing virtual machine's launcher PID: [${vmPID}]"
+      echo "Capturing virtual machine's launcher UID: [${vmUID}]"
+      echo "Capturing virtual machine's UUID        : [${vmUUID}]"
+      echo "Capturing virtual machine's RUNHASH     : [${prevRUNHASH}]"
+      echo
+      echo "Auto-attachment    : [${auto_attach}]"
+      echo "Keyboard attachment: [${attach_keyboard}]"
+      echo "ACPI forwarding    : [${acpi_forward}]"
+      echo "Print-listener     : [${launch_print_listener}]"
+      echo "Dedicated X server : [${use_new_X}]"
+    fi
+  fi
+
+# ------------------------------------------------------------------------------
+# -- Stop ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+elif [[ "${action}" == 'X' ]]; then
+  #
+  # stop_method: 'A' / 'O' / 'R' / 'V' / 'S'
+  #
+
+  # try to read the lock file's line
+  if ! readLock "${LOCKFILE}" _ vmUID vmUUID prevRUNHASH _ _ _ _ _; then log "${LOGFILE}" ${SEV_ERROR} 'no capturing virtual machine running!'; errors='X'
+  else
+    # check if the user may stop the capturing virtual machine
+    if (( ( UID != vmUID ) && UID )); then log "${LOGFILE}" ${SEV_ERROR} "you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+    else
+      # start building "stop" line
+      line="vboxmanage controlvm '${vmUUID}'"
+      # append stoppage type
+      if   [[ "${stop_method}" == 'A' ]]; then line="${line} acpipowerbutton"
+      elif [[ "${stop_method}" == 'O' ]]; then line="${line} poweroff"
+      elif [[ "${stop_method}" == 'R' ]]; then line="${line} reset"
+      elif [[ "${stop_method}" == 'S' ]]; then line="${line} savestate"
+      elif [[ "${stop_method}" == 'L' ]]; then line="${line} acpisleepbutton"
+      else log "${LOGFILE}" ${SEV_ERROR} "Invalid stoppage type! -- \`${stop_method}'"; errors='X'
+      fi
+      # prepend "sudo" prefix
+      if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
+      # append error redirection
+      line="${line} 2> /dev/null"
+
+      # evaluate stop line and report non-zero status
+      if ! eval -- "${line}"; then log "${LOGFILE}" ${SEV_WARNING} "stoppage returned non-zero ($?) status!" >&2; fi
+    fi
+  fi
+fi
+
+# yell about errors
+if [[ "${errors}" == 'X' ]]; then echo 'Errors were encountered, check logs!!!' >&2; fi
+# return 1 in case of errors
+if [[ "${errors}" ]]; then exit 1; fi
+
+
+# 'twas a good day :)
+exit 0
