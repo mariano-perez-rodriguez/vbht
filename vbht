@@ -577,12 +577,14 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
                [ --acpi-forward ]   [ --no-acpi-forward ]
                [ --print-listener ] [ --no-print-listener ]
                [ --new-X ]          [ --no-new-X ]
-   or: vbht attach DEVPATH
+               [ DEVPATH... ]
+   or: vbht attach [ DEVPATH... ]
    or: vbht forward { power | sleep }
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
+   or: vbht logs [ { UUID | NAME | HASH }... ]
    or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
 
-common options: [ -qv ] [ --quiet ] [ --verbose ]
+common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
 
    or: vbht { -h | --help }
    or: vbht { -V | --version }
@@ -720,6 +722,8 @@ EOM
             '--new-X'         ) use_new_X='Y'             ;; '--no-new-X'         ) use_new_X='Y'             ;;
             # check for verbosity options
             '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
+            # check for end-of-options
+            '--') break ;;
             # check for short options
             -*)
               # process each in turn
@@ -884,6 +888,7 @@ readonly verbosity
 if [[ "${action}" == 'S' ]]; then
   #
   # vmUUID: user provided UUID or name
+  # $@: DEVPATHs to attach on init
   #
   # auto_attach          : 'Y' / 'N'
   # attach_keyboard      : 'Y' / 'N'
@@ -963,6 +968,19 @@ if [[ "${action}" == 'S' ]]; then
         # if there were errors, just yell, not much we can do now
         if (( ret )); then log "${LOGFILE}" ${SEV_ERROR} 'keyboard attachment failed for at least one device!'; errors='X'; fi
       fi
+
+      # if there are devpaths to attach, do that now
+      while (( $# )); do
+        # get an address from the devpath (mask errors)
+        temp="${1}"; address=$(devpath2address "${1}") || true
+        # show error if not a valid DEVPATH
+        if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${temp}'"; errors='X'
+        else
+          # try to attach device line and report non-zero status
+          ret=0; vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> /dev/null || ret=$?
+          if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${temp}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
+        fi
+      done
 
       # if we disabled input devices, re-enable them now
       if [[ "${indevs}" ]]; then

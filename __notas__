@@ -34,7 +34,9 @@
 
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien
 
-- hacer que la action START tome una lista de devpaths a attachear al inicio
++ hacer que la action START tome una lista de devpaths a attachear al inicio
+
+- hacer que la action ATTACH tome varios devpaths
 
 - en caso de start y log considerar el parseo de la opcion "--" (porque ahora tomarian una lista de opciones)
 
