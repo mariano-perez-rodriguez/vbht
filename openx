@@ -91,7 +91,7 @@ declare line=''
 if (( $# == 0 )); then echo 'Error: no arguments provided!' >&2; errors='X'
 else
   # check for `--help' argument
-  if [[ "$1" == '-h' || "$1" == '--help' ]]; then
+  if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
     cat <<'EOM'
 Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]
            COMMAND [ARGUMENT...]
@@ -149,7 +149,7 @@ EOM
   fi
 
   # check for `--version' argument
-  if [[ "$1" == '-V' || "$1" == '--version' ]]; then
+  if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
     cat <<'EOM'
 openx 0.4
 Copyright (C) 2012 Mariano Perez Rodriguez
@@ -166,7 +166,7 @@ EOM
   fi
 
   # check for `--license' argument
-  if [[ "$1" == '-L' || "$1" == '--license' ]]; then
+  if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
     /usr/bin/env pager /opt/vbht/agplv3
     # just be obnoxious about `--license' not being the only argument given :P
     if (( $# != 1 )); then echo "Warning: \`--license' is supposed to be the ONLY argument given!" >&2; fi
@@ -174,24 +174,24 @@ EOM
   fi
 
   # check for dumping / simulation
-  if [[ "$1" == '-d' || "$1" == '--dump'  ]]; then  dump='Y'; fi
-  if [[ "$1" == '-s' || "$1" == '--sim'   ]]; then   sim='Y'; fi
-  if [[ "$1" == '-n' || "$1" == '--noptr' ]]; then noptr='Y'; fi
+  if [[ "${1}" == '-d' || "${1}" == '--dump'  ]]; then  dump='Y'; fi
+  if [[ "${1}" == '-s' || "${1}" == '--sim'   ]]; then   sim='Y'; fi
+  if [[ "${1}" == '-n' || "${1}" == '--noptr' ]]; then noptr='Y'; fi
   # prevent accidental modification
   readonly dump sim
   # adjust the argument list accordingly
-  if [[ "$dump" == 'Y' || "$sim" == 'Y' || "$noptr" == 'Y' ]]; then shift; fi
+  if [[ "${dump}" == 'Y' || "${sim}" == 'Y' || "${noptr}" == 'Y' ]]; then shift; fi
   # check for an additional 'noptr' option and adjust the argument list again
-  if [[ "$1" == '-n' || "$1" == '--noptr' ]]; then noptr='Y'; shift; fi
+  if [[ "${1}" == '-n' || "${1}" == '--noptr' ]]; then noptr='Y'; shift; fi
   # prevent accidental modification
   readonly noptr
 
   # try to find the command
-  comm=$(type -ap "$1" | head -n1)
+  comm=$(type -ap "${1}" | head -n1)
   # prevent accidental modification
   readonly comm
   # check to see if the command exists
-  if [[ "$comm" == '' ]]; then echo "Error: the argument \`$1' does not denote a known command!" >&2; errors='X'; fi
+  if [[ "${comm}" == '' ]]; then echo "Error: the argument \`${1}' does not denote a known command!" >&2; errors='X'; fi
 
   # shift arguments, we already have the command in $comm, be there errors or
   # not, they've already been reported
@@ -199,11 +199,11 @@ EOM
   shift
 
   # we don't allow lone `--' tokens in order not to confuse xinit, since it's effectively braindead when it comes to argument order
-  if [[ " $@ " =~ $loneddash ]]; then echo "Error: no lone \`--' tokens allowed!" >&2; errors='X'; fi
+  if [[ " $@ " =~ ${loneddash} ]]; then echo "Error: no lone \`--' tokens allowed!" >&2; errors='X'; fi
 fi
 
 # in case of errors, show info and exit
-if [[ "$errors" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 1; fi
+if [[ "${errors}" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 1; fi
 
 
 # ==============================================================================
@@ -225,15 +225,15 @@ if [[ "$errors" ]]; then echo "Try \`${0##*/} --help' for more information." >&2
 #   (`prev_pid' will be our "iterator")
 declare -i prev_pid=$$; until (( prev_pid <= 1 )); do
   # in case the ancestor's program is our "sudo"
-  if [[ $(readlink -e "/proc/$prev_pid/exe") == "$sudo_cmd" ]]; then
+  if [[ $(readlink -e "/proc/${prev_pid}/exe") == "${sudo_cmd}" ]]; then
     # go get the process which launched it
-    prev_pid=$(cut -d' ' -f4 "/proc/$prev_pid/stat")
+    prev_pid=$(cut -d' ' -f4 "/proc/${prev_pid}/stat")
     # get its UID and exit
-    prev_user=$(set -o pipefail; grep -ie '^uid:' "/proc/$prev_pid/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')
+    prev_user=$(set -o pipefail; grep -ie '^uid:' "/proc/${prev_pid}/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')
     break
   fi
   # otherwise, just keep looking
-  prev_pid=$(cut -d' ' -f4 "/proc/$prev_pid/stat")
+  prev_pid=$(cut -d' ' -f4 "/proc/${prev_pid}/stat")
 done; unset prev_pid
 
 # prevent accidental modification
@@ -244,7 +244,7 @@ if (( curr_user == -1 )); then echo "Error: cannot determine the current user's 
 if (( prev_user == -1 )); then echo "Error: cannot determine the previous user's id!" >&2; errors='X'; fi
 
 # if we know the relevant user names
-if [[ "$errors" == '' ]]; then
+if [[ "${errors}" == '' ]]; then
   # check for forbidden situations:
   #   - we don't allow chaining (ie. sudo sudo openx is NOT OK)
   #   - we don't allow root to open a new X terminal this way
@@ -254,13 +254,13 @@ if [[ "$errors" == '' ]]; then
   #             this!" + "you are not root!".
   if (( prev_user == curr_user )); then echo "Error: chaining is not allowed!" >&2; errors='X'; fi
   if (( prev_user == root_user )); then echo "Error: root can't do this!"      >&2; errors='X'; fi
-  if [[ "$errors" == '' ]]; then
+  if [[ "${errors}" == '' ]]; then
     if (( curr_user != root_user )); then echo 'Error: you are not root!' >&2; errors='X'; fi
   fi
 fi
 
 # in case of errors, show info and exit
-if [[ "$errors" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 2; fi
+if [[ "${errors}" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 2; fi
 
 # no longer needed
 unset errors
@@ -270,15 +270,15 @@ unset errors
 # ==============================================================================
 
 # show the new display number if asked to
-if [[ "$dump" == 'Y' ]]; then echo ":$display_new"; fi
+if [[ "${dump}" == 'Y' ]]; then echo ":${display_new}"; fi
 
 # build the line
-line="openvt -w -- sudo -Hnu '#$prev_user' -- xinit $comm $@ -- :$display_new"
+line="openvt -w -- sudo -Hnu '#${prev_user}' -- xinit ${comm} $@ -- :${display_new}"
 
 # pre-build options
-if [[ "$noptr" == 'Y' ]]; then
+if [[ "${noptr}" == 'Y' ]]; then
   # append '-nocursor' if appropiate
-  line="$line -nocursor"
+  line="${line} -nocursor"
 fi
 
 # prevent accidental modification
@@ -293,23 +293,22 @@ readonly line
 #     prompted for a password, and run xinit that way.
 
 # Remember to take simulation into account!
-if [[ "$sim" == 'Y' ]]; then
+if [[ "${sim}" == 'Y' ]]; then
   # echo an escaped string showing the resulting line
-  echo "$line"
+  echo "${line}"
 else
   # open a new terminal and wait for its command to finish,
   # de-escalate privileges back to the preivous user,
   # initiate a new X server and run the provided command;
   # in case of error, `ret' will hold the exit status
   # ret=0; openvt -w -- sudo -Hnu \#"$prev_user" -- xinit "$comm" "$@" -- :"$display_new$options" || ret=$?
-  ret=0; eval -- "$line" || ret=$?
+  ret=0; eval -- "${line}" || ret=$?
   # prevent accidental modification
   readonly ret
   # just be obnoxious about `openvt' not having returned 0 :/
-  if (( ret )); then echo "Warning: openvt returned non-zero ($ret) status!" >&2; fi
+  if (( ret )); then echo "Warning: openvt returned non-zero (${ret}) status!" >&2; fi
 fi
 
 
 # 'twas a good day :)
 exit 0
-
