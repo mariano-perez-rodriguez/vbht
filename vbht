@@ -39,11 +39,11 @@ set -T          # propagate DEBUG and RETURN traps
 # Outputs: UUID if found, empty otherwise
 getUUID() {
   # get the list of registered virtual machines
-  local temp=$(vboxmanage list vms 2> /dev/null | grep -e "^\"${1}\"" -e "\{${1}\}\$" 2> /dev/null)
+  local temp=$(vboxmanage list vms 2> "${ERRPIPE}" | grep -e "^\"${1}\"" -e "\{${1}\}\$" 2> "${ERRPIPE}")
   # if the denomination is ambiguous, return failure
-  if ! [[ "$(wc -l <<< "$temp" 2> /dev/null)" == '1' ]]; then return 1; fi
+  if ! [[ "$(wc -l <<< "${temp}" 2> "${ERRPIPE}")" == '1' ]]; then return 1; fi
   # extract the UUID from the vm's list
-  temp=$(grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' <<< "${temp}" 2> /dev/null)
+  temp=$(grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' <<< "${temp}" 2> "${ERRPIPE}")
   # and remove redundant "{" and "}"
   temp=${temp%\}}; temp=${temp#\{}
   # echo it and return success
@@ -82,7 +82,7 @@ waitRunning() {
   sleep -- "${2}s"
   for (( i = 0; i < l; i++ )); do
     # get virtual machine's state
-    state=$(vboxmanage showvminfo "${1}" --machinereadable 2> /dev/null | grep -e '^VMState=' | cut -d'"' -f2)
+    state=$(vboxmanage showvminfo "${1}" --machinereadable 2> "${ERRPIPE}" | grep -e '^VMState=' | cut -d'"' -f2)
     # exit successfully if in "running", unsuccessfully if not in "starting"
     if [[ "${state}" == 'running'  ]]; then return 0; fi
     if [[ "${state}" != 'starting' ]]; then return 1; fi
@@ -105,7 +105,7 @@ getWarns() {
   # get VirtualBox(R)'s warnings, strip the title, turn the comma-separated
   # list into a newline-separated list, remove empty lines, sort it, and
   # turn it back into a comma-separated list
-  vboxmanage getextradata global 'GUI/SuppressMessages' 2> /dev/null | cut -d' ' -f2 | tr ',' "\n" | grep . | sort -u | tr "\n" ','
+  vboxmanage getextradata global 'GUI/SuppressMessages' 2> "${ERRPIPE}" | cut -d' ' -f2 | tr ',' "\n" | grep . | sort -u | tr "\n" ','
 }
 
 # Set the list of SUPPRESSED VirtualBox(R) warnings
@@ -118,7 +118,7 @@ setWarns() {
   # sort list of options
   local -r temp=$(IFS=','; tr ',' "\n" <<< "$*" | grep . | sort -u | tr "\n" ',')
   # set them
-  vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> /dev/null
+  vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> "${ERRPIPE}"
 }
 
 # ------------------------------------------------------------------------------
@@ -145,12 +145,12 @@ getLock() {
   # try at most "LOCKRETRIES" times
   for (( i = 0; i < LOCKRETRIES; i++ )); do
     # try to get lock by using the noclobber option
-    if (set -o noclobber; IFS=':'; echo "${line[*]}" > "/tmp/${1}") 2> /dev/null; then return 0; fi
+    if (set -o noclobber; IFS=':'; echo "${line[*]}" > "/tmp/${1}") 2> "${ERRPIPE}"; then return 0; fi
     # get the locking PID (mask errors, in the VERY unlikely case of the
     # file being removed prior to this)
-    otherPID=$(head -n1 -- "/tmp/${1}" 2> /dev/null | cut -d':' -f1 2> /dev/null) || true
+    otherPID=$(head -n1 -- "/tmp/${1}" 2> "${ERRPIPE}" | cut -d':' -f1 2> "${ERRPIPE}") || true
     # check for stale
-    if (( otherPID )) && kill -0 -- "${otherPID}" 2> /dev/null; then
+    if (( otherPID )) && kill -0 -- "${otherPID}" 2> "${ERRPIPE}"; then
       # the lock is effectively being held by a running process,
       # echo the locking PID and return error
       #
@@ -160,7 +160,7 @@ getLock() {
       echo "${otherPID}"; return 1
     fi
     # the process holding the lock is dead, remove lock...
-    rm -f -- "/tmp/${1}" 2> /dev/null
+    rm -f -- "/tmp/${1}" 2> "${ERRPIPE}"
   done
   # return failure
   return 1
@@ -177,7 +177,7 @@ addToLock() {
   # modify the first output element
   line[0]=$$
   # append to the lockfile
-  echo "${line[*]}" >> "/tmp/${1}" 2> /dev/null
+  echo "${line[*]}" >> "/tmp/${1}" 2> "${ERRPIPE}"
 }
 
 # Read the contents of a lockfile
@@ -189,7 +189,7 @@ addToLock() {
 #          the "read" builtin would
 readLock() {
   # try to read the given variables
-  IFS=':' read -r ${@:2:${#@}} < <(tail -n1 -- "/tmp/${1}" 2> /dev/null || true)
+  IFS=':' read -r ${@:2:${#@}} < <(tail -n1 -- "/tmp/${1}" 2> "${ERRPIPE}" || true)
 }
 
 # ------------------------------------------------------------------------------
@@ -209,14 +209,14 @@ disableKbdsMice() {
   if (( $# )); then
     # sort the given XIDs, and, on the one hand, disable them, and on the
     # other concatenate them into a comma-terminated list of XIDs
-    # @DEBUG: xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
-    xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    # @DEBUG: xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
+    xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
   else
     # get the list slave keyboard and pointer XIDs, sort them, and, on the
     # one hand, disable them, and on the other concatenate them into a
     # comma-terminated list of XIDs
-    # @DEBUG: xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
-    xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    # @DEBUG: xids=$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
+    xids=$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
   fi
   # output the list
   echo "${xids%,}"
@@ -235,14 +235,14 @@ enableKbdsMice() {
   if (( $# )); then
     # sort the given XIDs, and, on the one hand, enable them, and on the
     # other concatenate them into a comma-terminated list of XIDs
-    # @DEBUG: xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
-    xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    # @DEBUG: xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
+    xids=$(tr ',' "\n" <<< "$*" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
   else
     # get the list slave keyboard and pointer XIDs, sort them, and, on the
     # one hand, enable them, and on the other concatenate them into a
     # comma-terminated list of XIDs
-    # @DEBUG: xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
-    xids=$(xinput list 2> /dev/null | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> /dev/null 2> /dev/null) | tr "\n" ',')
+    # @DEBUG: xids=$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
+    xids=$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr "\n" ',')
   fi
   # output the list
   echo "${xids%,}"
@@ -304,6 +304,27 @@ log() {
   echo "[${prevRUNHASH:-$RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${std_log}" >> "/var/log/vbht/${logfile}"
 }
 
+# Listen to stderr pipe and log
+# Continuously read from stdin and log whatever gets read as SEV_STDERR
+# Usage errListener FIFO [&]
+# Returns: 0, always
+# Outputs: nothing
+errListener() {
+  # get pipe
+  local -r pipe="${1}"
+  # set up temporary
+  local line=''
+
+  # while there's a (raw) line to be read
+  while IFS= read -r line; do
+    # if it's not blank
+    if [[ "${line}" ]]; then
+      # log it with SEV_STDERR
+      log "${LOGFILE}" ${SEV_STDERR} "${line}"
+    fi
+  done < "${pipe}"
+}
+
 # ------------------------------------------------------------------------------
 # -- Misc functions ------------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -322,7 +343,7 @@ log() {
 printListener() {
   local -i ret=0
   # get the canonical path to the directory and create it if it doesn't exist
-  local -r dir=$(readlink -m -- "${1}" 2> /dev/null); mkdir -p "${dir}"
+  local -r dir=$(readlink -m -- "${1}" 2> "${ERRPIPE}"); mkdir -p "${dir}"
 
   # (safely) ignore SIGPIPE
   trap ':' SIGPIPE
@@ -330,7 +351,7 @@ printListener() {
   # to get notified when a file is created) and "delete_self" (in order to be
   # able of self-termination) events, and reporting both the file affected,
   # and the event,
-  inotifywait -qme close_write,delete_self --format '%e %f' -- "${dir}" 2> /dev/null |
+  inotifywait -qme close_write,delete_self --format '%e %f' -- "${dir}" 2> "${ERRPIPE}" |
   # and read each line in turn (turn event into all-caps in order to avoid problems)
   while IFS=' ' read -r event file; do event="${event^^}"
     # in case the directory being listened to gets deleted, signal SIGPIPE to
@@ -351,7 +372,7 @@ printListener() {
       ) & disown %1
     else
       # otherwise, just remove it, we don't care for it
-      rm -f "${dir}/${file}" > /dev/null 2> /dev/null
+      rm -f "${dir}/${file}" > "${ERRPIPE}" 2> "${ERRPIPE}"
     fi
   done
   # return SEGPIPE trap to normal
@@ -406,6 +427,8 @@ declare -r LOGFILE='vbht'
 
 # hash for this script's run
 declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
+# error pipe for this script's run (defined in terms of RUNHASH)
+declare -r ERRPIPE="/tmp/${RUNHASH}"
 
 # maximum user settable verbosity
 declare -ri MAX_VERB=6
@@ -571,10 +594,18 @@ declare -i i=0
 
 
 # ==============================================================================
-# == Traps =====================================================================
+# == Traps and logging =========================================================
 # ==============================================================================
 
+# trap the DEBUG signal and turn it into a log entry
 trap "log \"${LOGFILE}\" ${SEV_DEBUG} Running \\\`\"\${BASH_COMMAND}\"\' at \"\${FUNCNAME:-main}:\${LINENO}\"" DEBUG
+# create the ERRPIPE FIFO
+#@TODO: set up permissions on mkfifo with the "-m" parameter
+mkfifo "${ERRPIPE}"
+# launch the errListener
+errListener "${ERRPIPE}" &
+# trap EXIT so that we may remove the FIFO pipe
+trap "rm -f -- ${ERRPIPE}" EXIT
 
 
 # ==============================================================================
@@ -969,7 +1000,7 @@ if [[ "${action}" == 'S' ]]; then
       # to be run, additionally, add a "--fullscreen" modifier
       if [[ "${use_new_X}" == 'Y' ]]; then line="sudo -Hn -- /opt/vbht/openx -n ${line} --fullscreen"; fi
       # finish building launch line
-      line="${line} --no-debug --no-startvm-errormsgbox --start-running 2> /dev/null"
+      line="${line} --no-debug --no-startvm-errormsgbox --start-running 2> ${ERRPIPE}"
       # evaluate launch line (no point in checking exit code, as the line is run
       # in the background) and get its PID
       eval -- "${line}" & vbPID=$!
@@ -986,7 +1017,7 @@ if [[ "${action}" == 'S' ]]; then
       # machine is in "running" state, attach keyboards if need be
       if [[ "${attach_keyboard}" == 'Y' ]]; then
         # try to attach every keyboard
-        ret=0; lsKbds | tr ',' "\n" | xargs -rn1 -I{} vboxmanage controlvm "${vmUUID}" usbattach '{}' 2> /dev/null || ret=$?
+        ret=0; lsKbds | tr ',' "\n" | xargs -rn1 -I{} vboxmanage controlvm "${vmUUID}" usbattach '{}' 2> "${ERRPIPE}" || ret=$?
         # if there were errors, just yell, not much we can do now
         if (( ret )); then log "${LOGFILE}" ${SEV_ERROR} 'keyboard attachment failed for at least one device!'; errors='X'; fi
       fi
@@ -999,7 +1030,7 @@ if [[ "${action}" == 'S' ]]; then
         if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${1}'"; errors='X'
         else
           # try to attach device line and report non-zero status
-          ret=0; vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> /dev/null || ret=$?
+          ret=0; vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> "${ERRPIPE}" || ret=$?
           if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${1}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
         fi
         # shift the processed parameter out
@@ -1009,10 +1040,10 @@ if [[ "${action}" == 'S' ]]; then
       # if we disabled input devices, re-enable them now
       if [[ "${indevs}" ]]; then
         # try to re-enable input devices
-        if enableKbdsMice "${indevs}" > /dev/null; then
+        if enableKbdsMice "${indevs}" > "${ERRPIPE}"; then
           # if re-enabling failed, yell and try to re-enable all of them
           log "${LOGFILE}" ${SEV_ERROR} 're-enabling input devices failed, trying to re-enable them all!'; errors='X'
-          if ! enableKbdsMice > /dev/null; then log "${LOGFILE}" ${SEV_ERROR} 're-enabling all input devices failed!'; errors='X'; fi
+          if ! enableKbdsMice > "${ERRPIPE}"; then log "${LOGFILE}" ${SEV_ERROR} 're-enabling all input devices failed!'; errors='X'; fi
         fi
       fi
 
@@ -1063,7 +1094,7 @@ elif [[ "${action}" == 'A' ]]; then
           if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${1}'"; errors='X'
           else
             # evaluate attach line and report non-zero status
-            ret=0; eval -- "${line} '${address}' 2> /dev/null" || ret=$?
+            ret=0; eval -- "${line} '${address}' 2> ${ERRPIPE}" || ret=$?
             if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${1}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
           fi
           # shift the processed parameter out
@@ -1102,7 +1133,7 @@ elif [[ "${action}" == 'F' ]]; then
         # only try to evaluate well formed forward lines
         if [[ "${errors}" == '' ]]; then
           # evaluate forward line and report non-zero status
-          if ! eval -- "${line} 2> /dev/null"; then errors='S'; fi
+          if ! eval -- "${line} 2> ${ERRPIPE}"; then errors='S'; fi
         fi
       fi
     fi
@@ -1166,7 +1197,7 @@ elif [[ "${action}" == 'X' ]]; then
       # prepend "sudo" prefix
       if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
       # append error redirection
-      line="${line} 2> /dev/null"
+      line="${line} 2> ${ERRPIPE}"
 
       # evaluate stop line and report non-zero status
       if ! eval -- "${line}"; then log "${LOGFILE}" ${SEV_WARNING} "stoppage returned non-zero ($?) status!" >&2; fi
