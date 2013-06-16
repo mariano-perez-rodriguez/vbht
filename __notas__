@@ -23,7 +23,7 @@
 
 - hacer internacionalizacion de strings (http://mywiki.wooledge.org/BashFAQ/098) (para esto por ahi conviene empezar a usar printf en lugar de echo)
 
-- hacer output coloreado
++ hacer output coloreado
   echo "$(tput bold)"; echo "$(tput setaf 5)FATAL"; echo "$(tput setaf 1)ERROR"; echo "$(tput setaf 3)WARNING"; echo "$(tput setaf 2)INFO"; echo "$(tput setaf 6)DEBUG"; echo "$(tput setaf 4)STDERR"
   para ver si esta terminal soporta output coloreado: (http://unix.stackexchange.com/questions/9957/how-to-check-if-bash-can-print-colors)
   $(tput colors) da la cantidad de colores que se banca
