@@ -733,7 +733,7 @@ EOM
             # check for verbosity options
             '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
             # check for end-of-options
-            '--') break ;;
+            '--') shift 1; break ;;
             # check for short options
             -*)
               # process each in turn
@@ -764,14 +764,14 @@ EOM
       # check for too few arguments
       if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} 'too few arguments!'; errors='X'
       else
-        # save the argument
-        address="${2}"
         # get optional arguments
-        shift 2
+        shift 1
         while (( $# )); do
           case "${1}" in
             # check for verbosity options
             '--quiet') (( verbosity-- )) || true ;; '--verbose') (( verbosity++ )) || true ;;
+            # check for end-of-options
+            '--') shift 1; break ;;
             # check for short options
             -*)
               # process each in turn
@@ -982,13 +982,13 @@ if [[ "${action}" == 'S' ]]; then
       # if there are devpaths to attach, do that now
       while (( $# )); do
         # get an address from the devpath (mask errors)
-        temp="${1}"; address=$(devpath2address "${1}") || true
+        address=$(devpath2address "${1}") || true
         # show error if not a valid DEVPATH
-        if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${temp}'"; errors='X'
+        if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${1}'"; errors='X'
         else
           # try to attach device line and report non-zero status
           ret=0; vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> /dev/null || ret=$?
-          if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${temp}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
+          if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${1}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
         fi
         # shift the processed parameter out
         shift 1
@@ -1012,7 +1012,7 @@ if [[ "${action}" == 'S' ]]; then
 
       # try to restore ignored warnings, if the command failed, at least
       # let the user know which were the original warnings
-      if setWarns "${warns}"; then log "${LOGFILE}" ${SEV_WARNING} "restoring ignored warnings returned non-zero ($?) status! -- \`${warns}'"; fi
+      if setWarns "${warns}"; then log "${LOGFILE}" ${SEV_WARNING} "restoring ignored warnings returned non-zero ($?) status! -- \`${warns}'"; errors='X'; fi
 
       # free lock file
       rm -f -- "${LOCKFILE}"
@@ -1025,7 +1025,7 @@ if [[ "${action}" == 'S' ]]; then
 
 elif [[ "${action}" == 'A' ]]; then
   #
-  # $address: devpath to attach
+  # $@: DEVPATHs to attach
   #
 
   # try to read the lock file's line
@@ -1043,15 +1043,20 @@ elif [[ "${action}" == 'A' ]]; then
         # prepend "sudo" prefix
         if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
 
-        # get an address from the devpath (mask errors)
-        temp="${address}"; address=$(devpath2address "${address}") || true
-        # show error if not a valid DEVPATH
-        if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${temp}'"; errors='X'
-        else
-          # evaluate attach line and report non-zero status
-          ret=0; eval -- "${line} '${address}' 2> /dev/null" || ret=$?
-          if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${temp}' at address \`${address}' returned non-zero (${ret}) status!"; fi
-        fi
+        #process each DEVPATH in turn
+        while (( $# )); do
+          # get an address from the DEVPATH (mask errors)
+          address=$(devpath2address "${1}") || true
+          # show error if not a valid DEVPATH
+          if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} "invalid devpath! -- \`${1}'"; errors='X'
+          else
+            # evaluate attach line and report non-zero status
+            ret=0; eval -- "${line} '${address}' 2> /dev/null" || ret=$?
+            if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${1}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
+          fi
+          # shift the processed parameter out
+          shift 1
+        done
       fi
     fi
   fi

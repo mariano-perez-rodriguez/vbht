@@ -36,9 +36,11 @@
 
 + hacer que la action START tome una lista de devpaths a attachear al inicio
 
-- hacer que la action ATTACH tome varios devpaths
++ hacer que la action ATTACH tome varios devpaths
 
-- en caso de start y log considerar el parseo de la opcion "--" (porque ahora tomarian una lista de opciones)
++ en caso de start considerar el parseo de la opcion "--" (porque ahora toma una lista de opciones)
+
+- en caso de logs considerar el parseo de la opcion "--" (porque ahora toma una lista de opciones)
 
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
