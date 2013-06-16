@@ -584,7 +584,8 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
    or: vbht logs [ { UUID | NAME | HASH }... ]
    or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
 
-common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
+common options: [ -qvcC ] [ --quiet ] [ --verbose ]
+                [ --color ] [ --no-color ] [--]
 
    or: vbht { -h | --help }
    or: vbht { -V | --version }
@@ -624,13 +625,20 @@ and USB auto-attachment.
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
+      -c, --color     try to use ANSI sequences to colorize output (this is
+                      disabled if output is not a tty with at least 8-colors
+                      capability)
+      -C, --no-color  don't use ANSI scape sequences to colorize output
+
+      --  signal the end of options, lake the rest of the parameters literally
+
       -h, --help     display this help and exit
       -V, --version  output version information and exit
       -L, --license  display the GNU Affero General Public License and exit
 
 Actions: the first argument to vbht must be either `--help', `--version',
   `--license', or an ACTION, ie. one of: `start', `attach', `forward', `info',
-  or `stop'.
+  `logs', or `stop'.
 
       start    start the virtual machine NAME or UUID in capturing mode
       attach   attach the (USB) device found at DEVPATH to the virtual machine
@@ -640,6 +648,8 @@ Actions: the first argument to vbht must be either `--help', `--version',
                generated to either stdout or stderr) when no errors
       info     return information about the virtual machine currently running
                in capturing mode (if there's one such machine)
+      logs     show (coloured) log files for the given virtual machine, or for
+               the currently running one, if there's one such and none given
       stop     stop the virtual machine currently running in capturing mode
 
 Examples (`>' stands for the shell prompt):
