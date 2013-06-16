@@ -269,47 +269,6 @@ lsKbds() {
 # -- Log functions -------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-
-
-# Variables for terminal requests (http://mywiki.wooledge.org/BashFAQ/037)
-[[ -t 2 ]] && {
-  bold=$(   tput bold  || tput md) # Start bold
-  blink=$(  tput blink || tput mb) # Start blinking
-  stout=$(  tput smso  || tput so) # Start stand-out
-  estout=$( tput rmso  || tput se) # End   stand-out
-  italic=$( tput sitm  || tput ZH) # Start italic
-  eitalic=$(tput ritm  || tput ZR) # End   italic
-  under=$(  tput smul  || tput us) # Start underline
-  eunder=$( tput rmul  || tput ue) # End   underline
-
-  [[ ${TERM} != *-m ]] && {
-    red=$(    tput setaf 1 || tput AF 1)
-    green=$(  tput setaf 2 || tput AF 2)
-    yellow=$( tput setaf 3 || tput AF 3)
-    blue=$(   tput setaf 4 || tput AF 4)
-    magenta=$(tput setaf 5 || tput AF 5)
-    cyan=$(   tput setaf 6 || tput AF 6)
-    white=$(  tput setaf 7 || tput AF 7)
-  }
-
-  default=$(tput op)
-
-  alt=$( tput smcup || tput ti) # Start alt display
-  ealt=$(tput rmcup || tput te) # End   alt display
-
-  reset=$(tput sgr0  || tput me) # Reset cursor
-  hide=$( tput civis || tput vi) # Hide  cursor
-  show=$( tput cnorm || tput ve) # Show  cursor
-  save=$( tput sc              ) # Save  cursor
-  load=$( tput rc              ) # Load  cursor
-
-} 2> /dev/null ||:
-
-# escribir funciones que:
-# - dado un string y un color, escriban un string que echo podria imprimir en ese color
-# - dados dos strings, imprimen uno si stderr es una tty y el otro si no
-
-
 # Write to the logfile and, optionally, to stderr
 # Write the provided arguments to the LOGFILE, assuming a given SEVERITY
 # and, depending on the value of "verbosity", output STRING... to stderr
@@ -322,21 +281,25 @@ log() {
   local -i severity="${2}"
   # get string parameters
   shift 2
+  # set up temporaries
   local temp="$@"
+  local std_err=''
+  local std_log=''
 
   # prepend severity type string to output line (don't do anything for
-  # unrecognised severities)
-  if   (( severity == 1 )); then temp="Fatal: ${temp}"
-  elif (( severity == 2 )); then temp="Error: ${temp}"
-  elif (( severity == 3 )); then temp="Warning: ${temp}"
-  elif (( severity == 4 )); then temp="Info: ${temp}"
-  elif (( severity == 5 )); then temp="Debug: ${temp}"
+  # unrecognised severities) and build stderr and stdlog temporaries
+  if   (( severity == 1 )); then std_err="${START_FATAL}Fatal:${STOP_FATAL} ${temp}";       std_log="Fatal: ${temp}"
+  elif (( severity == 2 )); then std_err="${START_ERROR}Error:${STOP_ERROR} ${temp}";       std_log="Error: ${temp}"
+  elif (( severity == 3 )); then std_err="${START_WARNING}Warning:${STOP_WARNING} ${temp}"; std_log="Warning: ${temp}"
+  elif (( severity == 4 )); then std_err="${START_INFO}Info:${STOP_INFO} ${temp}";          std_log="Info: ${temp}"
+  elif (( severity == 5 )); then std_err="${START_DEBUG}Debug:${STOP_DEBUG} ${temp}";       std_log="Debug: ${temp}"
+  elif (( severity == 6 )); then std_err="${START_STDERR}Stderr:${STOP_STDERR} ${temp}";    std_log="Stderr: ${temp}"
   fi
 
   # if verbosity mandates, show to stderr
-  if (( severity <= verbosity )); then echo "${temp}" >&2; fi
+  if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${temp}" >> "/var/log/vbht/${logfile}"
+  echo "[${prevRUNHASH:-RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${std_log}" >> "/var/log/vbht/${logfile}"
 }
 
 # ------------------------------------------------------------------------------
@@ -395,6 +358,7 @@ printListener() {
   rm -rf "${dir}"; return 1
 }
 
+
 # ==============================================================================
 # == Constants =================================================================
 # ==============================================================================
@@ -452,6 +416,23 @@ declare -ri SEV_ERROR=2
 declare -ri SEV_FATAL=1
 # "other" is used to signify no pre-format is to be applied
 declare -ri SEV_OTHER=0
+
+# colours and shapes
+declare START_STDERR=''  STOP_STDERR=''
+declare START_DEBUG=''   STOP_DEBUG=''
+declare START_INFO=''    STOP_INFO=''
+declare START_WARNING='' STOP_WARNING=''
+declare START_ERROR=''   STOP_ERROR=''
+declare START_FATAL=''   STOP_FATAL=''
+# initialise according to STDERRTYPE
+if [[ "${STDERRTYPE}" == 'C' ]]; then
+  START_STDERR="$( tput bold)$(tput setaf 4)"; STOP_STDERR="$( tput sgr0)"
+  START_DEBUG="$(  tput bold)$(tput setaf 6)"; STOP_DEBUG="$(  tput sgr0)"
+  START_INFO="$(   tput bold)$(tput setaf 2)"; STOP_INFO="$(   tput sgr0)"
+  START_WARNING="$(tput bold)$(tput setaf 3)"; STOP_WARNING="$(tput sgr0)"
+  START_ERROR="$(  tput bold)$(tput setaf 1)"; STOP_ERROR="$(  tput sgr0)"
+  START_FATAL="$(  tput bold)$(tput setaf 5)"; STOP_FATAL="$(  tput sgr0)"
+fi
 
 # ------------------------------------------------------------------------------
 # -- Synchronization constants -------------------------------------------------
@@ -612,8 +593,7 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
    or: vbht logs [ { UUID | NAME | HASH }... ]
    or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
 
-common options: [ -qvcC ] [ --quiet ] [ --verbose ]
-                [ --color ] [ --no-color ] [--]
+common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
 
    or: vbht { -h | --help }
    or: vbht { -V | --version }
@@ -652,11 +632,6 @@ and USB auto-attachment.
 
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
-
-      -c, --color     try to use ANSI sequences to colorize stderr (this is
-                      disabled if stderr is not a tty with at least 8-colors
-                      capability)
-      -C, --no-color  don't use ANSI scape sequences to colorize output
 
       --  signal the end of options, lake the rest of the parameters literally
 
