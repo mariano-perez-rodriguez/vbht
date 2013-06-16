@@ -990,6 +990,8 @@ if [[ "${action}" == 'S' ]]; then
           ret=0; vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> /dev/null || ret=$?
           if (( ret )); then log "${LOGFILE}" ${SEV_WARNING} "attaching devpath \`${temp}' at address \`${address}' returned non-zero (${ret}) status!"; errors='X'; fi
         fi
+        # shift the processed parameter out
+        shift 1
       done
 
       # if we disabled input devices, re-enable them now
