@@ -1,0 +1,47 @@
+#! /usr/bin/env bash
+
+##
+## vbht_uninstaller - VirtualBox(R) Host Tools -- uninstaller
+## Copyright (C) 2012  Mariano Perez Rodriguez
+##
+## This program is free software: you can redistribute it and/or modify it
+## under the terms of the GNU Affero General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU Affero General Public License for more details.
+##
+## You should have received a copy of the GNU Affero General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses>.
+##
+
+set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
+set -o nounset  # be merciless about unset variables
+set -o errexit  # exit on ANY error
+
+# ==============================================================================
+# == Actual work ===============================================================
+# ==============================================================================
+
+# fail if the user is not running the script as root
+if (( $UID )); then echo 'Error: this script MUST be run as root!' >&2; exit 1; fi
+
+# restore backups
+mv -fT -- '/etc/acpi/pre-vbht-powerbtn.sh' '/etc/acpi/powerbtn.sh' 2> /dev/null
+mv -fT -- '/etc/acpi/pre-vbht-sleepbtn.sh' '/etc/acpi/sleepbtn.sh' 2> /dev/null
+
+# remove every file added by the installer in a non-opt location
+rm -f -- '/etc/udev/rules.d/vbht.rules' 2> /dev/null
+rm -f -- '/etc/logrotate.d/vbht'        2> /dev/null
+rm -f -- '/etc/sudoers.d/vbht'          2> /dev/null
+
+# remove every file in "/opt/vbht", and itself
+rm -rf -- '/opt/vbht' 2> /dev/null
+
+
+# aaand we're done!
+exit 0
+

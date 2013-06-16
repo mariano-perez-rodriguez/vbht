@@ -1,0 +1,315 @@
+#! /usr/bin/env bash
+
+##
+## openx - (securely) execute a command on a new instance of the X server
+## Copyright (C) 2012  Mariano Perez Rodriguez
+##
+## This program is free software: you can redistribute it and/or modify it
+## under the terms of the GNU Affero General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU Affero General Public License for more details.
+##
+## You should have received a copy of the GNU Affero General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses>.
+##
+
+set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
+set -o nounset  # be merciless about unset variables
+set -o errexit  # exit on ANY error
+
+# ==============================================================================
+# == Constants =================================================================
+# ==============================================================================
+
+# regular expression to find lone double dashes
+declare -r loneddash='.*[[:space:]]--[[:space:]].*'
+
+# `sudo_cmd' will hold the "canonical" sudo command
+declare -r sudo_cmd=$(type -ap 'sudo' | head -n1)
+
+# `root_user' will hold root's UID (0)
+declare -ri root_user=0
+
+# curr_user' will hold the UID of the current process (or -1 in case of errors)
+# (this is the second field in the line which starts "Uid:..." in the contents
+# of /proc/$$/status)
+declare -ri curr_user=$(set -o pipefail; grep -ie '^uid:' "/proc/$$/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')
+
+# `display_len' holds the display number's length in digits
+declare -ri display_len=10
+
+# new_display will get generated as a number display_len digits long, starting
+# with a non zero digit
+declare -ri display_new=$(tr -cd 123456789 < /dev/urandom | head -c1; tr -cd 0123456789 < /dev/urandom | head -c$(( display_len - 1 )))
+
+
+# ==============================================================================
+# == Option variables ==========================================================
+# ==============================================================================
+
+# when this variable is non empty we've got errors to report
+declare -u errors=''
+
+# whether to dump the display number
+#  'Y'  dump display number
+#  'N'  don't dump display number
+declare -u dump='N'
+
+# whether we're just simulating
+#  'Y'  simulating
+#  'N'  not a drill
+declare -u sim='N'
+
+# whether we should hide the mouse pointer
+#  'Y'  hide it
+#  'N'  leave it be
+declare -u noptr='N'
+
+# ==============================================================================
+# == State variables ===========================================================
+# ==============================================================================
+
+# `prev_user' will hold the UID of the first `sudo' ancestor process
+declare -i prev_user='-1'
+
+# `ret' will hold return values
+declare -i ret=0
+
+# `line' will hold the final line to be executed
+declare line=''
+
+# ==============================================================================
+# == Arguments check ===========================================================
+# ==============================================================================
+
+# we must have at least one argument
+if (( $# == 0 )); then echo 'Error: no arguments provided!' >&2; errors='X'
+else
+  # check for `--help' argument
+  if [[ "$1" == '-h' || "$1" == '--help' ]]; then
+    cat <<'EOM'
+Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]
+           COMMAND [ARGUMENT...]
+   or: openx { -h | --help }
+   or: openx { -V | --version }
+   or: openx { -L | --license }
+
+(securely) Execute COMMAND on a new instance of the X server, switching to
+it and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.
+
+      -d, --dump   dump the display number of the newly created X instance
+                   before running COMMAND, eg. `:1234567890'
+      -s, --sim    simulate but don't run: output the line to be executed
+      -n, --noptr  hide the mouse pointer for the newly created X server root
+
+      -h, --help     display this help and exit
+      -V, --version  output version information and exit
+      -L, --license  display the GNU Affero General Public License and exit
+
+Examples (`>' stands for the shell prompt, `1000' for the current UID):
+
+    > sudo openx -s xclock -digital -utime
+    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \
+      -- :1234567890
+
+    > sudo openx -d xclock -digital -utime
+    :1234567890
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if user identity error.
+
+
+NOTE: this script has a will of its own, bear in mind that
+  1. it MUST BE RUN UNDER SUDO, moreover, it MUST SUDO TO ROOT, it will
+     refuse to work otherwise,
+  2. root (ie. the user with UID == 0) may NOT run this script, not even
+     by sudo-ing (ie. `sudo openx whatever' will NOT work for root),
+  3. sudo-chaining (ie. `sudo sudo openx whatever') is NOT allowed,
+  4. no `--' tokens are allowed when they don't lie adjacent to
+     something other than a space-class character (the chaps at X can
+     get REALLY confused otherwise).
+
+openx can't hear your cries, don't fight it: these meassures were set
+in place in order to keep you from shooting yourself on the foot.
+
+
+Written by Mariano Perez Rodriguez.
+Report openx bugs to: mariano.perez.rodriguez@gmail.com
+EOM
+    # just be obnoxious about `--help' not being the only argument given :P
+     if (( $# != 1 )); then echo "Warning: \`--help' is supposed to be the ONLY argument given!" >&2; fi
+    exit 0
+  fi
+
+  # check for `--version' argument
+  if [[ "$1" == '-V' || "$1" == '--version' ]]; then
+    cat <<'EOM'
+openx 0.4
+Copyright (C) 2012 Mariano Perez Rodriguez
+License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Mariano Perez Rodriguez.
+Report openx bugs to: mariano.perez.rodriguez@gmail.com
+EOM
+    # just be obnoxious about `--version' not being the only argument given :P
+    if (( $# != 1 )); then echo "Warning: \`--version' is supposed to be the ONLY argument given!" >&2; fi
+    exit 0
+  fi
+
+  # check for `--license' argument
+  if [[ "$1" == '-L' || "$1" == '--license' ]]; then
+    /usr/bin/env pager /opt/vbht/agplv3
+    # just be obnoxious about `--license' not being the only argument given :P
+    if (( $# != 1 )); then echo "Warning: \`--license' is supposed to be the ONLY argument given!" >&2; fi
+    exit 0
+  fi
+
+  # check for dumping / simulation
+  if [[ "$1" == '-d' || "$1" == '--dump'  ]]; then  dump='Y'; fi
+  if [[ "$1" == '-s' || "$1" == '--sim'   ]]; then   sim='Y'; fi
+  if [[ "$1" == '-n' || "$1" == '--noptr' ]]; then noptr='Y'; fi
+  # prevent accidental modification
+  readonly dump sim
+  # adjust the argument list accordingly
+  if [[ "$dump" == 'Y' || "$sim" == 'Y' || "$noptr" == 'Y' ]]; then shift; fi
+  # check for an additional 'noptr' option and adjust the argument list again
+  if [[ "$1" == '-n' || "$1" == '--noptr' ]]; then noptr='Y'; shift; fi
+  # prevent accidental modification
+  readonly noptr
+
+  # try to find the command
+  comm=$(type -ap "$1" | head -n1)
+  # prevent accidental modification
+  readonly comm
+  # check to see if the command exists
+  if [[ "$comm" == '' ]]; then echo "Error: the argument \`$1' does not denote a known command!" >&2; errors='X'; fi
+
+  # shift arguments, we already have the command in $comm, be there errors or
+  # not, they've already been reported
+  #   NOTE: this will leave $0 untouched
+  shift
+
+  # we don't allow lone `--' tokens in order not to confuse xinit, since it's effectively braindead when it comes to argument order
+  if [[ " $@ " =~ $loneddash ]]; then echo "Error: no lone \`--' tokens allowed!" >&2; errors='X'; fi
+fi
+
+# in case of errors, show info and exit
+if [[ "$errors" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 1; fi
+
+
+# ==============================================================================
+# == Users checks ==============================================================
+# ==============================================================================
+
+# get the user ids associated with both, this process, and the newest sudo
+# executed, the steps are:
+#  1. get the UID of this process,
+#  2. traverse the `parent-process' relation until there are no fathers left or
+#     the ancestor being looked at has a PID of 0 or 1 (init),
+#  3. if at any moment we find that the current ancestor is `sudo', save its
+#     associated UID and finish
+# we do this because it is the only safe way of getting this data (ie. in order
+# for the `proc' filesystem to be corrupted the intruder would need access to
+# the kernel itself
+
+# step through our ancestors until we reach init (or no ancestors left)
+#   (`prev_pid' will be our "iterator")
+declare -i prev_pid=$$; until (( prev_pid <= 1 )); do
+  # in case the ancestor's program is our "sudo"
+  if [[ $(readlink -e "/proc/$prev_pid/exe") == "$sudo_cmd" ]]; then
+    # go get the process which launched it
+    prev_pid=$(cut -d' ' -f4 "/proc/$prev_pid/stat")
+    # get its UID and exit
+    prev_user=$(set -o pipefail; grep -ie '^uid:' "/proc/$prev_pid/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')
+    break
+  fi
+  # otherwise, just keep looking
+  prev_pid=$(cut -d' ' -f4 "/proc/$prev_pid/stat")
+done; unset prev_pid
+
+# prevent accidental modification
+readonly prev_user
+
+# fail if we don't have enough information about the users
+if (( curr_user == -1 )); then echo "Error: cannot determine the current user's id!"  >&2; errors='X'; fi
+if (( prev_user == -1 )); then echo "Error: cannot determine the previous user's id!" >&2; errors='X'; fi
+
+# if we know the relevant user names
+if [[ "$errors" == '' ]]; then
+  # check for forbidden situations:
+  #   - we don't allow chaining (ie. sudo sudo openx is NOT OK)
+  #   - we don't allow root to open a new X terminal this way
+  #   - we don't allow anyone, except for root, to be here right now
+  #       NOTE: we only show this if there have been no previous errors, in
+  #             order to avoid the awkward-looking message combo "root can't do
+  #             this!" + "you are not root!".
+  if (( prev_user == curr_user )); then echo "Error: chaining is not allowed!" >&2; errors='X'; fi
+  if (( prev_user == root_user )); then echo "Error: root can't do this!"      >&2; errors='X'; fi
+  if [[ "$errors" == '' ]]; then
+    if (( curr_user != root_user )); then echo 'Error: you are not root!' >&2; errors='X'; fi
+  fi
+fi
+
+# in case of errors, show info and exit
+if [[ "$errors" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 2; fi
+
+# no longer needed
+unset errors
+
+# ==============================================================================
+# == Actual work ===============================================================
+# ==============================================================================
+
+# show the new display number if asked to
+if [[ "$dump" == 'Y' ]]; then echo ":$display_new"; fi
+
+# build the line
+line="openvt -w -- sudo -Hnu '#$prev_user' -- xinit $comm $@ -- :$display_new"
+
+# pre-build options
+if [[ "$noptr" == 'Y' ]]; then
+  # append '-nocursor' if appropiate
+  line="$line -nocursor"
+fi
+
+# prevent accidental modification
+readonly line
+
+
+# (IDEA) open a virtual terminal, waiting for the command to finish, de-escalate
+# privileges back to the previous user [1], run a new X server on the display
+# numbered `$new_display'
+#
+# [1] this will only work if root can become any user whatsoever without being
+#     prompted for a password, and run xinit that way.
+
+# Remember to take simulation into account!
+if [[ "$sim" == 'Y' ]]; then
+  # echo an escaped string showing the resulting line
+  echo "$line"
+else
+  # open a new terminal and wait for its command to finish,
+  # de-escalate privileges back to the preivous user,
+  # initiate a new X server and run the provided command;
+  # in case of error, `ret' will hold the exit status
+  # ret=0; openvt -w -- sudo -Hnu \#"$prev_user" -- xinit "$comm" "$@" -- :"$display_new$options" || ret=$?
+  ret=0; eval -- "$line" || ret=$?
+  # prevent accidental modification
+  readonly ret
+  # just be obnoxious about `openvt' not having returned 0 :/
+  if (( ret )); then echo "Warning: openvt returned non-zero ($ret) status!" >&2; fi
+fi
+
+
+# 'twas a good day :)
+exit 0
+

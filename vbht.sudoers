@@ -1,0 +1,4 @@
+# /etc/sudoers.d/vbht.sudoers
+
+# allow all vboxusers to run openx without asking for a password
+%vboxusers ALL = (root) NOPASSWD: /opt/vbht/openx

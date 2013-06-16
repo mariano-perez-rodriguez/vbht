@@ -1,0 +1,246 @@
+#! /usr/bin/env bash
+
+##
+## vbht_builder - VirtualBox(R) Host Tools -- installer builder
+## Copyright (C) 2012  Mariano Perez Rodriguez
+##
+## This program is free software: you can redistribute it and/or modify it
+## under the terms of the GNU Affero General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU Affero General Public License for more details.
+##
+## You should have received a copy of the GNU Affero General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses>.
+##
+
+set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
+set -o nounset  # be merciless about unset variables
+set -o errexit  # exit on ANY error
+
+# ==============================================================================
+# == Constants =================================================================
+# ==============================================================================
+
+# installation stub
+declare -r stub=$(tail -n+$(( $(grep -nam1 -e '^___VBHT_INSTALL_STUB_STARTS_HERE___$' "$0" 2> /dev/null | cut -d':' -f1) + 1)) -- "$0")
+
+# ==============================================================================
+# == Variables =================================================================
+# ==============================================================================
+
+# temporary file name
+declare tempfile=''
+
+# compressed data's SHA512 checksum
+declare -u checksum=''
+
+# ==============================================================================
+# == Actual work ===============================================================
+# ==============================================================================
+
+# fail if the user is not running the script as root
+if (( $UID )); then echo 'Error: this script MUST be run as root!' >&2; exit 1; fi
+
+# get a new temporary file for the compressed contents
+tempfile=$(mktemp); readonly tempfile
+
+# tar every file to the temporary
+tar -cJf "$tempfile" 'agplv3' 'openx' 'vbht' 'vbht_uninstaller' 'vbht.udev' 'vbht.logrotate' 'vbht.sudoers' 'vbht.powerbtn.sh' 'vbht.sleepbtn.sh' 2> /dev/null
+
+# calculate the checksum
+checksum=$(sha512sum -b "$tempfile" 2> /dev/null | cut -d' ' -f1); readonly checksum
+
+# replace checksum into stub, and place it in the destination file
+echo "${stub//___COMPRESSED_DATA_SHA512_CHECKSUM_GOES_HERE___/$checksum}" > "vbht_installer"
+
+# append the base64 encoding of the compressed data
+#  (this is in order to avoid problems with "text mode" vs "binary mode" in some
+#   scenarios)
+base64 -w0 -- "$tempfile" >> 'vbht_installer' 2> /dev/null
+
+# fix permissions
+chmod a=rx 'vbht_installer'
+
+# tar every file to the source tgz
+tar -cJf 'vbht_source.tar.xz' 'agplv3' 'openx' 'vbht' 'vbht_uninstaller' 'vbht.udev' 'vbht.logrotate' 'vbht.sudoers' 'vbht.powerbtn.sh' 'vbht.sleepbtn.sh' 'vbht_builder' 2> /dev/null
+
+# remove the temporary file
+rm -f -- "$tempfile"
+
+
+# 'twas a good day :)
+exit 0
+
+___VBHT_INSTALL_STUB_STARTS_HERE___
+#! /usr/bin/env bash
+
+##
+## vbht_installer - VirtualBox(R) Host Tools -- installer
+## Copyright (C) 2012  Mariano Perez Rodriguez
+##
+## This program is free software: you can redistribute it and/or modify it
+## under the terms of the GNU Affero General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU Affero General Public License for more details.
+##
+## You should have received a copy of the GNU Affero General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses>.
+##
+
+set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
+set -o nounset  # be merciless about unset variables
+set -o errexit  # exit on ANY error
+
+# ==============================================================================
+# == Constants =================================================================
+# ==============================================================================
+
+# the GID corresponding to "vboxusers", or "-1" in case of errors
+declare -ri vbuGID=$(set -o pipefail; getent 'group' 'vboxusers' | cut -d':' -f3 || echo '-1')
+
+# the line at which base64 encoded compressed data starts, or "-1" in case of errors
+declare -ri offset=$(set -o pipefail; grep -nam1 -e '^___COMPRESSED_DATA_SHA512_CHECKSUM_GOES_HERE___$' "$0" 2> /dev/null | cut -d':' -f1 || echo '-1')
+
+# ==============================================================================
+# == Variables =================================================================
+# ==============================================================================
+
+# the compressed data's checksum
+declare -u checksum=''
+
+# temporary file name
+declare tempfile=''
+
+# temporary directory name
+declare tempdir=''
+
+# ==============================================================================
+# == General checks ============================================================
+# ==============================================================================
+
+# fail if the user is not running the script as root
+if (( $UID )); then echo 'Error: this script MUST be run as root!' >&2; exit 1; fi
+
+# fail if we couldn't find "vboxusers" group
+if (( $vbuGID == -1 )); then echo $'Error: could not find `vboxusers\' group!' >&2; exit 1; fi
+
+# fail if we couldn't find the compressed data's start
+if (( $offset == -1 )); then echo 'Error: could not find data start -- corrupted file!' >&2; exit 1; fi
+
+# create a new temporary file for the compressed data
+tempfile=$(mktemp); readonly tempfile
+
+# splice the compressed data into the temporary file, and get its checksum
+checksum=$(tail -n+$(( $offset + 1 )) "$0" | base64 -d | tee "$tempfile" | sha512sum -b | cut -d' ' -f1); readonly checksum
+
+# if they don't match, give an error
+if [[ "$checksum" != '___COMPRESSED_DATA_SHA512_CHECKSUM_GOES_HERE___' ]]; then echo 'Error: consistency check failed!' >&2; exit 2; fi
+
+
+# ==============================================================================
+# == User confirmation =========================================================
+# ==============================================================================
+
+# show message telling the user what we're going to do and asking for confirmation
+cat <<'EOM'
+This will install the VirtualBox(R) Host Tools on your system.
+
+The actions to be performed are the following:
+  1. Back ACPI scripts up:
+       - `/etc/acpi/powerbtn.sh' to `/etc/acpi/pre-vbht-powerbtn.sh', and
+       - `/etc/acpi/sleepbtn.sh' to `/etc/acpi/pre-vbht-sleepbtn.sh'.
+  2. Copy `satellite' files:
+       - `vbht.powerbtn.sh' to `/etc/acpi/powerbtn.sh',
+       - `vbht.sleepbtn.sh' to `/etc/acpi/sleepbtn.sh',
+       - `vbht.udev'        to `/etc/udev/rules.d/vbht.rules',
+       - `vbht.logrotate'   to `/etc/logrotate.d/vbht', and
+       - `vbht.sudoers'     to `/etc/sudoers.d/vbht',
+     changing ownership and permissions as well.
+  3. Create the `/opt/vbht' directory.
+  4. Copy, to the new directory, the files:
+       - `agplv3' (the GNU Affero General Public License),
+       - `openx',
+       - `vbht', and
+       - `vbht_uninstaller',
+     changing ownership and permissions as well.
+  5. Create the log directory `/var/log/vbht'.
+
+EOM
+read -rsN1 -p $'Enter `Y\' to continue, anything else to exit...'
+
+# if anything other that "Y" was entered, exit
+if [[ "$REPLY" != 'Y' ]]; then
+  echo
+  echo
+  echo 'Aborted by user!'
+  exit
+fi
+
+
+# ==============================================================================
+# == Installation ==============================================================
+# ==============================================================================
+
+# create a new temporary directory as a staging area for the extracted files
+tempdir=$(mktemp -d); readonly tempdir
+
+# extract the data to the newly created tempdir
+tar -xJC "$tempdir" -f "$tempfile" 2> /dev/null
+
+# -- Final copying -------------------------------------------------------------
+
+# make backups
+mv -nT -- '/etc/acpi/powerbtn.sh' '/etc/acpi/pre-vbht-powerbtn.sh' 2> /dev/null
+mv -nT -- '/etc/acpi/sleepbtn.sh' '/etc/acpi/pre-vbht-sleepbtn.sh' 2> /dev/null
+
+# move files to their destinations
+#  - udev rules file to "/etc/udev/rules.d"
+#  - logrotate config file to "/etc/logrotate.d"
+#  - sudoers config file to "/etc/sudoers.d"
+mv -fT -- "$tempdir/vbht.powerbtn.sh" '/etc/acpi/powerbtn.sh'        2> /dev/null
+mv -fT -- "$tempdir/vbht.sleepbtn.sh" '/etc/acpi/sleepbtn.sh'        2> /dev/null
+mv -fT -- "$tempdir/vbht.udev"        '/etc/udev/rules.d/vbht.rules' 2> /dev/null
+mv -fT -- "$tempdir/vbht.logrotate"   '/etc/logrotate.d/vbht'        2> /dev/null
+mv -fT -- "$tempdir/vbht.sudoers"     '/etc/sudoers.d/vbht'          2> /dev/null
+# change ownership
+chown -f root:root '/etc/acpi/powerbtn.sh' '/etc/acpi/sleepbtn.sh' '/etc/udev/rules.d/vbht.rules' '/etc/logrotate.d/vbht' '/etc/sudoers.d/vbht' 2> /dev/null
+# change permissions
+chmod -f ug=r,o= '/etc/sudoers.d/vbht' 2> /dev/null
+chmod -f u=rw,go=r '/etc/udev/rules.d/vbht.rules' '/etc/logrotate.d/vbht' 2> /dev/null
+chmod -f u=rwx,go=rx '/etc/acpi/powerbtn.sh' '/etc/acpi/sleepbtn.sh' 2> /dev/null
+
+# create vbht directory under "/opt"
+mkdir -p '/opt/vbht'
+
+# copy the rest of the files to "/opt/vbht"
+mv -ft '/opt/vbht' -- "$tempdir/agplv3" "$tempdir/openx" "$tempdir/vbht" "$tempdir/vbht_uninstaller"
+# change ownership
+chown -f root:vboxusers '/opt/vbht/agplv3' '/opt/vbht/openx' '/opt/vbht/vbht' 2> /dev/null
+# change permissions
+chmod -f ug=rx,o= '/opt/vbht/openx' '/opt/vbht/vbht' 2> /dev/null; chmod -f ugo=rx '/opt/vbht/agplv3' 2> /dev/null
+
+# the uninstaller is more restrictive
+chown -f root:root '/opt/vbht/vbht_uninstaller' 2> /dev/null; chmod -f ug=rx,o= '/opt/vbht/vbht_uninstaller' 2> /dev/null
+
+# create log directory and change its owner and permission
+mkdir -p '/var/log/vbht'; chown -f root:vboxusers '/var/log/vbht'; chmod -f ug=srwx,o= '/var/log/vbht'
+
+# remove temporary file and dir
+rm  -f -- "$tempfile"
+rm -rf -- "$tempdir"
+
+
+# 'twas a good day :)
+exit 0
+
+___COMPRESSED_DATA_SHA512_CHECKSUM_GOES_HERE___
