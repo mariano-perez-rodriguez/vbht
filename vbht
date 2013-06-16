@@ -21,6 +21,8 @@
 set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
 set -o nounset  # be merciless about unset variables
 set -o errexit  # exit on ANY error
+set -E          # propagate errexit
+set -T          # propagate DEBUG and RETURN traps
 
 
 # ==============================================================================
@@ -299,7 +301,7 @@ log() {
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${std_log}" >> "/var/log/vbht/${logfile}"
+  echo "[${prevRUNHASH:-$RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${std_log}" >> "/var/log/vbht/${logfile}"
 }
 
 # ------------------------------------------------------------------------------
@@ -566,6 +568,13 @@ declare -i ret=0
 temp=''
 # generic iterator
 declare -i i=0
+
+
+# ==============================================================================
+# == Traps =====================================================================
+# ==============================================================================
+
+trap "log \"${LOGFILE}\" ${SEV_DEBUG} Running \\\`\"\${BASH_COMMAND}\"\' at \"\${FUNCNAME:-main}:\${LINENO}\"" DEBUG
 
 
 # ==============================================================================
