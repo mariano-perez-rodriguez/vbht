@@ -400,6 +400,28 @@ printListener() {
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
+# -- System-related constants --------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# stderr a type
+#  'C'  colour-capable tty (at least 8 colors available)
+#  'M'  monochrome tty (or less than 8 colours)
+#  'O'  other type of stderr (eg. pipe)
+declare -u STDERRTYPE=''
+# determine stderr type
+if [[ -t 2 ]]; then
+  if (( $(tput colors 2> /dev/null) >= 8 )); then
+    STDERRTYPE='C'
+  else
+    STDERRTYPE='M'
+  fi
+else
+  STDERRTYPE='O'
+fi
+# prevent accidental modification
+readonly STDERRTYPE
+
+# ------------------------------------------------------------------------------
 # -- Lock-related constants ----------------------------------------------------
 # ------------------------------------------------------------------------------
 
@@ -513,9 +535,14 @@ declare -u launch_print_listener='Y'
 declare -u use_new_X='Y'
 
 # whether info should be shown in machine readable format
-#  'Y'  show info in machine readable format
-#  'N'  don't show info in machine readable format  (default)
-declare -u info_machine_readable='N'
+#  'Y'  show info in machine readable format (default if stderr is not a tty)
+#  'N'  don't show info in machine readable format  (default otherwise)
+declare -u info_machine_readable=''
+if [[ "${STDERRTYPE}" == 'O' ]]; then
+  info_machine_readable='Y'
+else
+  info_machine_readable='N'
+fi
 
 # minimum severity to report to stderr
 declare -i verbosity=2
@@ -625,8 +652,8 @@ and USB auto-attachment.
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
-      -c, --color     try to use ANSI sequences to colorize output (this is
-                      disabled if output is not a tty with at least 8-colors
+      -c, --color     try to use ANSI sequences to colorize stderr (this is
+                      disabled if stderr is not a tty with at least 8-colors
                       capability)
       -C, --no-color  don't use ANSI scape sequences to colorize output
 

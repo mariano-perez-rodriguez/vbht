@@ -44,5 +44,5 @@
 
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
-- hacer que machine-readable sea el default cuando se llama desde algo que no sea una tty
++ hacer que machine-readable sea el default cuando se llama desde algo que no sea una tty
   
