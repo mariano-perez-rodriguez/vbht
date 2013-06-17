@@ -301,7 +301,7 @@ log() {
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-$RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')] ${std_log}" >> "/var/log/vbht/${logfile}"
+  echo "[${prevRUNHASH:-$RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N') ${severity}] ${std_log}" >> "/var/log/vbht/${logfile}"
 }
 
 # Listen to stderr pipe and log
