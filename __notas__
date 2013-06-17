@@ -14,6 +14,11 @@
 
 - usar 'printf -v'!!!
 
+- cambiar log para que refleje el formato: log LOGFILE SEVERITY FORMAT [PARAMS...]
+  donde FORMAT es un formato de printf y PARAMS los parametros a pasarle
+
+- reorganizar temas de paths (ie. que el logfile apunte al path completo, no solo al nombre hardcodeando "/tmp")
+
 - para recargar reglas de udev (SIN inotify, con lo cual funciona con links simbolicos... asumo)
   http://reactivated.net/writing_udev_rules.html
     ver "Testing and debugging > Putting your rules into action"
