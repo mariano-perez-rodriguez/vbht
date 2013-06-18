@@ -14,6 +14,8 @@
 
 - usar 'printf -v'!!!
 
+- definir variables de entorno de donde se saquen los defaults para muchas variables de opciones nuestras
+
 - cambiar log para que refleje el formato: log LOGFILE SEVERITY FORMAT [PARAMS...]
   donde FORMAT es un formato de printf y PARAMS los parametros a pasarle
 
