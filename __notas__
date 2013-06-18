@@ -33,6 +33,8 @@
   para ver si esta terminal soporta output coloreado: (http://unix.stackexchange.com/questions/9957/how-to-check-if-bash-can-print-colors)
   $(tput colors) da la cantidad de colores que se banca
 
+- agregar bold a algun aque otra linea en el help (y en el verion? y en el license?)
+
 + hacer un FIFO para el stderr de los subcomandos (este tiene un "listener" que le agrega un header a cada linea)
 
 + hacer el tema de setear la trap para DEBUG y loguear todo comando que se ejecute (http://mywiki.wooledge.org/BashFAQ/050)
