@@ -695,6 +695,16 @@ Actions: the first argument to vbht must be either `--help', `--version',
                the currently running one, if there's one such and none given
       stop     stop the virtual machine currently running in capturing mode
 
+Verbosity: the 6 verbosity levels are `fatal', `error', `warning', `info',
+  `debug', and `stderr'.
+
+      fatal    a condition which makes it impossible to go on
+      error    an error condition that can be ignored in order to go on
+      warning  an error condition that has no immediate consequences
+      info     an informational message about the state of the program
+      debug    an execution log of every command ran
+      stderr   the standard error lines, as redirected internally
+
 Examples (`>' stands for the shell prompt):
 
     > vbht start 'My VM' --no-print-listener --no-auto-attach
@@ -715,9 +725,7 @@ Exit status:
 NOTES:
   1. if more than one conflicting option is given (eg. more than one stop type),
      the last one takes precedence (this does NOT apply to verbosity options),
-  2. verbosity options, if at all given, MUST follow an action and, if the
-     action so requires, its argument; they may be repeated multiple times,
-  3. the DEVPATH argument has the same syntax as udev's `$devpath' or `%p'
+  2. the DEVPATH argument has the same syntax as udev's `$devpath' or `%p'
      replaceable parameter (see UDEV(7)).
 
 
