@@ -390,7 +390,7 @@ printListener() {
 # -- System-related constants --------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# stderr a type
+# stderr type
 #  'C'  colour-capable tty (at least 8 colors available)
 #  'M'  monochrome tty (or less than 8 colours)
 #  'O'  other type of stderr (eg. pipe)
@@ -407,6 +407,24 @@ else
 fi
 # prevent accidental modification
 readonly STDERRTYPE
+
+# stdout type
+#  'C'  colour-capable tty (at least 8 colors available)
+#  'M'  monochrome tty (or less than 8 colours)
+#  'O'  other type of stdout (eg. pipe)
+declare -u STDOUTTYPE=''
+# determine stderr type
+if [[ -t 1 ]]; then
+  if (( $(tput colors 2> /dev/null) >= 8 )); then
+    STDOUTTYPE='C'
+  else
+    STDOUTTYPE='M'
+  fi
+else
+  STDOUTTYPE='O'
+fi
+# prevent accidental modification
+readonly STDOUTTYPE
 
 # ------------------------------------------------------------------------------
 # -- Lock-related constants ----------------------------------------------------
@@ -449,6 +467,7 @@ declare START_INFO=''    STOP_INFO=''
 declare START_WARNING='' STOP_WARNING=''
 declare START_ERROR=''   STOP_ERROR=''
 declare START_FATAL=''   STOP_FATAL=''
+declare START_EMPH=''    STOP_EMPH=''
 # initialise according to STDERRTYPE
 if [[ "${STDERRTYPE}" == 'C' ]]; then
   START_STDERR="$( tput bold)$(tput setaf 4)"; STOP_STDERR="$( tput sgr0)"
@@ -457,6 +476,10 @@ if [[ "${STDERRTYPE}" == 'C' ]]; then
   START_WARNING="$(tput bold)$(tput setaf 3)"; STOP_WARNING="$(tput sgr0)"
   START_ERROR="$(  tput bold)$(tput setaf 1)"; STOP_ERROR="$(  tput sgr0)"
   START_FATAL="$(  tput bold)$(tput setaf 5)"; STOP_FATAL="$(  tput sgr0)"
+fi
+
+if [[ "${STDOUTTYPE}" == 'C' || "${STDOUTTYPE}" == 'M' ]]; then
+  START_EMPH="$(tput bold)"; STOP_EMPH="$(tput sgr0)"
 fi
 
 # ------------------------------------------------------------------------------
@@ -545,7 +568,7 @@ declare -u use_new_X='Y'
 #  'Y'  show info in machine readable format (default if stderr is not a tty)
 #  'N'  don't show info in machine readable format  (default otherwise)
 declare -u info_machine_readable=''
-if [[ "${STDERRTYPE}" == 'O' ]]; then
+if [[ "${STDOUTTYPE}" == 'O' ]]; then
   info_machine_readable='Y'
 else
   info_machine_readable='N'
