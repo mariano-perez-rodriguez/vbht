@@ -287,21 +287,23 @@ log() {
   local temp="$@"
   local std_err=''
   local std_log=''
+  local -u sev_name=''
 
   # prepend severity type string to output line (don't do anything for
   # unrecognised severities) and build stderr and stdlog temporaries
-  if   (( severity == 1 )); then std_err="${START_FATAL}Fatal:${STOP_FATAL} ${temp}";       std_log="Fatal: ${temp}"
-  elif (( severity == 2 )); then std_err="${START_ERROR}Error:${STOP_ERROR} ${temp}";       std_log="Error: ${temp}"
-  elif (( severity == 3 )); then std_err="${START_WARNING}Warning:${STOP_WARNING} ${temp}"; std_log="Warning: ${temp}"
-  elif (( severity == 4 )); then std_err="${START_INFO}Info:${STOP_INFO} ${temp}";          std_log="Info: ${temp}"
-  elif (( severity == 5 )); then std_err="${START_DEBUG}Debug:${STOP_DEBUG} ${temp}";       std_log="Debug: ${temp}"
-  elif (( severity == 6 )); then std_err="${START_STDERR}Stderr:${STOP_STDERR} ${temp}";    std_log="Stderr: ${temp}"
+  if   (( severity == 1 )); then sev_name='F'; std_err="${START_FATAL}Fatal:${STOP_FATAL} ${temp}";       std_log="Fatal: ${temp}"
+  elif (( severity == 2 )); then sev_name='E'; std_err="${START_ERROR}Error:${STOP_ERROR} ${temp}";       std_log="Error: ${temp}"
+  elif (( severity == 3 )); then sev_name='W'; std_err="${START_WARNING}Warning:${STOP_WARNING} ${temp}"; std_log="Warning: ${temp}"
+  elif (( severity == 4 )); then sev_name='I'; std_err="${START_INFO}Info:${STOP_INFO} ${temp}";          std_log="Info: ${temp}"
+  elif (( severity == 5 )); then sev_name='D'; std_err="${START_DEBUG}Debug:${STOP_DEBUG} ${temp}";       std_log="Debug: ${temp}"
+  elif (( severity == 6 )); then sev_name='S'; std_err="${START_STDERR}Stderr:${STOP_STDERR} ${temp}";    std_log="Stderr: ${temp}"
+  else                           sev_name='O'; std_err="${temp}";                                         std_log="${temp}"
   fi
 
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-$RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N') ${severity}] ${std_log}" >> "/var/log/vbht/${logfile}"
+  echo "[${prevRUNHASH:-$RUNHASH} $(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N') ${sev_name}] ${std_log}" >> "/var/log/vbht/${logfile}"
 }
 
 # Listen to stderr pipe and log
