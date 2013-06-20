@@ -27,6 +27,8 @@ DONE:
 
 TODO:
 
+- hacer que la trap de DEBUG no loguee la funcion "log"
+
 - ver si el artilugio de leer con "<>" se puede usar para simplificar el printListener()
 
 - reorganizar temas de paths (ie. que el logfile apunte al path completo, no solo al nombre hardcodeando "/tmp")
