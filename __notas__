@@ -19,17 +19,19 @@ DONE:
 
 + hacer que machine-readable sea el default cuando se llama desde algo que no sea una tty
 
++ cambiar log para que refleje el formato: log LOGFILE SEVERITY FORMAT [PARAMS...]
+  donde FORMAT es un formato de printf y PARAMS los parametros a pasarle
+
 
 TODO:
 
-- cambiar log para que refleje el formato: log LOGFILE SEVERITY FORMAT [PARAMS...]
-  donde FORMAT es un formato de printf y PARAMS los parametros a pasarle
+- ver si el artilugio de leer con "<>" se puede usar para simplificar el printListener()
 
 - reorganizar temas de paths (ie. que el logfile apunte al path completo, no solo al nombre hardcodeando "/tmp")
 
 - agregar bold a alguna que otra linea en el help (y en el verion? y en el license?)
 
-- hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien
+- hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
 - en caso de logs considerar el parseo de la opcion "--" (porque ahora toma una lista de opciones)
 
