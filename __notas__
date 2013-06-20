@@ -26,6 +26,8 @@ DONE:
 
 + hacer que la trap de DEBUG no loguee la funcion "log"
 
++ definir variables de entorno de donde se saquen los defaults para muchas variables de opciones nuestras
+
 
 TODO:
 
@@ -38,8 +40,6 @@ TODO:
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
 - en caso de logs considerar el parseo de la opcion "--" (porque ahora toma una lista de opciones)
-
-- definir variables de entorno de donde se saquen los defaults para muchas variables de opciones nuestras
 
 - usar 'printf -v'!!!
 

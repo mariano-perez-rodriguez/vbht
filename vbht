@@ -530,6 +530,8 @@ declare -r IGNOREWARNINGS='confirmGoingFullscreen,confirmGoingSeamless,confirmIn
 # == Option variables ==========================================================
 # ==============================================================================
 
+#@TODO: defend against malicious variable values (ie. malicious VBHT_STOP_METHOD)
+
 # when this variable is non empty we've chanced upon errors
 #  'S'  errors occurred, but be silent about it
 #  'X'  errors occurred which need reporting
@@ -549,50 +551,50 @@ declare -u action=''
 #  'R'  reset
 #  'S'  save state
 #  'L'  ACPI sleep
-declare -u stop_method='O'
+declare -u stop_method="${VBHT_STOP_METHOD:-O}"
 
 # whether to enable auto attachment
 #  'Y'  enable auto-attachment  (default)
 #  'N'  disable auto-attachment
 #  'E'  auto-attachment has been disabled due to errors
-declare -u auto_attach='Y'
+declare -u auto_attach="${VBHT_AUTO_ATTACH:-Y}"
 
 # whether to enable (USB) keyboard attachment
 #  'Y'  enable keyboard attachment  (default)
 #  'N'  disable keyboard attachment
 #  'E'  keyboard attachment has been disabled due to errors
-declare -u attach_keyboard='Y'
+declare -u attach_keyboard="${VBHT_ATTACH_KEYBOARD:-Y}"
 
 # whether to forward ACPI (power/sleep button) events
 #  'Y'  forward ACPI events  (default)
 #  'N'  don't forward ACPI events
 #  'E'  forwarding ACPI events has been disabled due to errors
-declare -u acpi_forward='Y'
+declare -u acpi_forward="${VBHT_ACPI_FORWARD:-Y}"
 
 # whether to launch the print listening service
 #  'Y'  launch print listener  (default)
 #  'N'  con't launch print listener
 #  'E'  launching of print listener has been disabled due to errors
-declare -u launch_print_listener='Y'
+declare -u launch_print_listener="${VBHT_LAUNCH_PRINT_LISTENER:-Y}"
 
 # whether to use a new instance of the X server
 #  'Y'  use a new instance of the X server  (default)
 #  'N'  don't use a new instance of the X server
 #  'E'  using a new instance has been disabled due to errors
-declare -u use_new_X='Y'
+declare -u use_new_X="${VBHT_USE_NEW_X:-Y}"
 
 # whether info should be shown in machine readable format
 #  'Y'  show info in machine readable format (default if stderr is not a tty)
 #  'N'  don't show info in machine readable format  (default otherwise)
-declare -u info_machine_readable=''
-if [[ "${STDOUTTYPE}" == 'O' ]]; then
+declare -u info_machine_readable="${VBHT_INFO_MACHINE_READABLE:-}"
+if [[ "${info_machine_readable}" == '' && "${STDOUTTYPE}" == 'O' ]]; then
   info_machine_readable='Y'
 else
   info_machine_readable='N'
 fi
 
 # minimum severity to report to stderr
-declare -i verbosity=2
+declare -i verbosity="${VBHT_VERBOSITY:-2}"
 
 
 # ==============================================================================
@@ -747,6 +749,25 @@ Verbosity: the 6 verbosity levels are `fatal', `error', `warning', `info',
       info     an informational message about the state of the program
       debug    an execution log of every command ran
       stderr   the standard error lines, as redirected internally
+
+Environment variables: several environment variables, with the `VBHT_' prefix,
+  are used to provide defaults: `VBHT_AUTO_ATTACH', `VBHT_ATTACH_KEYBOARD',
+  `VBHT_ACPI_FORWARD', `VBHT_LAUNCH_PRINT_LISTENER', `VBHT_USE_NEW_X', and
+  `VBHT_INFO_MACHINE_READABLE' can take either the `Y' or `N' values and
+  provide defaults for their corresponding options; the `VBHT_STOP_METHOD'
+  variable can take either one of the `A', `O', `R', `S', `L' values and each
+  determines a stoppage type whose equivalence to the options mentioned above
+  is given by:
+
+      A  -a, --acpi
+      O  -o, --off
+      R  -r, --reset
+      S  -s, --save
+      L  -l, --sleep
+
+  last, the `VBHT_VERBOSITY' variable may take any integer number to be taken
+  as the default verbosity value (note, however, that values below 0 or above 6
+  will be ignored and truncated to that range).
 
 Examples (`>' stands for the shell prompt):
 
