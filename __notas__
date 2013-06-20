@@ -24,10 +24,10 @@ DONE:
 
 + hacer internacionalizacion de strings (http://mywiki.wooledge.org/BashFAQ/098) (para esto por ahi conviene empezar a usar printf en lugar de echo)
 
++ hacer que la trap de DEBUG no loguee la funcion "log"
+
 
 TODO:
-
-- hacer que la trap de DEBUG no loguee la funcion "log"
 
 - ver si el artilugio de leer con "<>" se puede usar para simplificar el printListener()
 

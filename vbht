@@ -648,7 +648,7 @@ errListener "${ERRPIPE}" &
 trap "rm -f -- ${ERRPIPE}" EXIT
 
 # trap the DEBUG signal and turn it into a log entry
-trap "log \"${LOGFILE}\" ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"" DEBUG
+trap "if [[ \"\${FUNCNAME:-main}\" != 'log' ]]; then log \"${LOGFILE}\" ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
 
 
 # ==============================================================================
