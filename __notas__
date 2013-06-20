@@ -22,6 +22,8 @@ DONE:
 + cambiar log para que refleje el formato: log LOGFILE SEVERITY FORMAT [PARAMS...]
   donde FORMAT es un formato de printf y PARAMS los parametros a pasarle
 
++ hacer internacionalizacion de strings (http://mywiki.wooledge.org/BashFAQ/098) (para esto por ahi conviene empezar a usar printf en lugar de echo)
+
 
 TODO:
 
@@ -38,8 +40,6 @@ TODO:
 - definir variables de entorno de donde se saquen los defaults para muchas variables de opciones nuestras
 
 - usar 'printf -v'!!!
-
-- hacer internacionalizacion de strings (http://mywiki.wooledge.org/BashFAQ/098) (para esto por ahi conviene empezar a usar printf en lugar de echo)
 
 - para verificar que los comandos que necesitamos esten usar cosas de:
   http://wiki.bash-hackers.org/scripting/style#behaviour_and_robustness
