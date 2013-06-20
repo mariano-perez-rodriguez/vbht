@@ -369,8 +369,8 @@ printListener() {
       # print the recently created file without a banner and deleting it
       # when done (if there are errors, log them)
       (
-        if lp -c "${dir}/${file}"; then
-          log "${LOGFILE}" ${SEV_ERROR} 'lp returned non-zero (%d) status' $?
+        if lpr -hr "${dir}/${file}"; then
+          log "${LOGFILE}" ${SEV_ERROR} 'lpr returned non-zero (%d) status' $?
         else
           rm -f -- "${dir}/${file}"
         fi
