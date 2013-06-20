@@ -141,7 +141,7 @@ in place in order to keep you from shooting yourself on the foot.
 
 
 Written by Mariano Perez Rodriguez.
-Report openx bugs to: mariano.perez.rodriguez@gmail.com
+Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--help' not being the only argument given :P
      if (( $# != 1 )); then echo "Warning: \`--help' is supposed to be the ONLY argument given!" >&2; fi
@@ -158,7 +158,7 @@ This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
 Written by Mariano Perez Rodriguez.
-Report openx bugs to: mariano.perez.rodriguez@gmail.com
+Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--version' not being the only argument given :P
     if (( $# != 1 )); then echo "Warning: \`--version' is supposed to be the ONLY argument given!" >&2; fi

@@ -753,7 +753,7 @@ NOTES:
 
 
 Written by Mariano Perez Rodriguez.
-Report vbht bugs to: mariano.perez.rodriguez@gmail.com
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--help' not being the only argument given :P
     if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} "\`--help' is supposed to be the ONLY argument given!"; fi
@@ -770,7 +770,7 @@ This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
 Written by Mariano Perez Rodriguez.
-Report vbht bugs to: mariano.perez.rodriguez@gmail.com
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--version' not being the only argument given :P
     if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} "\`--version' is supposed to be the ONLY argument given!"; fi
