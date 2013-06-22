@@ -1,179 +1,179 @@
-#: vbht:305
+#: vbht:322
 msgid "Fatal"
 msgstr ""
 
-#: vbht:306
+#: vbht:323
 msgid "Error"
 msgstr ""
 
-#: vbht:307
+#: vbht:324
 msgid "Warning"
 msgstr ""
 
-#: vbht:308
+#: vbht:325
 msgid "Info"
 msgstr ""
 
-#: vbht:309
+#: vbht:326
 msgid "Debug"
 msgstr ""
 
-#: vbht:310
+#: vbht:327
 msgid "Stderr"
 msgstr ""
 
-#: vbht:385
+#: vbht:401
 msgid "lpr returned non-zero (%d) status"
 msgstr ""
 
-#: vbht:658
+#: vbht:676
 msgid "VBHT started"
 msgstr ""
 
-#: vbht:661
+#: vbht:679
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:779
+#: vbht:816
 msgid "\\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:796
+#: vbht:833
 msgid "\\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:804
+#: vbht:841
 msgid "\\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:813 vbht:859 vbht:892
+#: vbht:850 vbht:896 vbht:929
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:844 vbht:877 vbht:919 vbht:958
+#: vbht:881 vbht:914 vbht:956 vbht:995
 msgid "invalid option at \\`%s'! -- \\`%s'"
 msgstr ""
 
-#: vbht:849 vbht:882 vbht:924 vbht:963
+#: vbht:886 vbht:919 vbht:961 vbht:1000
 msgid "invalid option! -- \\`%s'"
 msgstr ""
 
-#: vbht:897
+#: vbht:934
 msgid "additional arguments ignored! -- \\`%s'"
 msgstr ""
 
-#: vbht:969
+#: vbht:1006
 msgid "invalid action! -- \\`%s'"
 msgstr ""
 
-#: vbht:974
+#: vbht:1011
 msgid "Try \\`%s --help' for more information.\\n"
 msgstr ""
 
-#: vbht:1010
+#: vbht:1047
 msgid "invalid virtual machine specification! -- \\`%s'"
 msgstr ""
 
-#: vbht:1015
+#: vbht:1052
 msgid "another process is holding the lock with PID %s!"
 msgstr ""
 
-#: vbht:1021
+#: vbht:1058
 msgid "setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!"
 msgstr ""
 
-#: vbht:1041
+#: vbht:1078
 msgid "disabling input devices (%s) failed, keyboards will NOT be attached!"
 msgstr ""
 
-#: vbht:1061
+#: vbht:1098
 msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
 msgstr ""
 
-#: vbht:1073
+#: vbht:1108
 msgid "keyboard attachment failed for at least one device!"
 msgstr ""
 
-#: vbht:1081 vbht:1145
+#: vbht:1116 vbht:1181
 msgid "invalid devpath! -- \\`%s'"
 msgstr ""
 
-#: vbht:1085 vbht:1149
+#: vbht:1120 vbht:1185
 msgid "attaching devpath \\`%s' at address \\`%s' returned non-zero (%d) status!"
 msgstr ""
 
-#: vbht:1096
+#: vbht:1132
 msgid "re-enabling input devices failed, trying to re-enable them all!"
 msgstr ""
 
-#: vbht:1097
+#: vbht:1133
 msgid "re-enabling all input devices failed!"
 msgstr ""
 
-#: vbht:1109
+#: vbht:1145
 msgid "restoring ignored warnings returned non-zero (%d) status! -- \\`%s'"
 msgstr ""
 
-#: vbht:1127 vbht:1233
+#: vbht:1163 vbht:1270
 msgid "no capturing virtual machine running!"
 msgstr ""
 
-#: vbht:1130
+#: vbht:1166
 msgid "the capturing virtual machine does not accept attachments!"
 msgstr ""
 
-#: vbht:1133 vbht:1236
+#: vbht:1169 vbht:1273
 msgid "you're neither the capturing virtual machine's owner, nor root!"
 msgstr ""
 
-#: vbht:1204
+#: vbht:1241
 msgid "No vbht-managed virtual machine running!"
 msgstr ""
 
-#: vbht:1210
+#: vbht:1247
 msgid "Capturing virtual machine's launcher PID: [%s]"
 msgstr ""
 
-#: vbht:1211
+#: vbht:1248
 msgid "Capturing virtual machine's launcher UID: [%s]"
 msgstr ""
 
-#: vbht:1212
+#: vbht:1249
 msgid "Capturing virtual machine's UUID        : [%s]"
 msgstr ""
 
-#: vbht:1213
+#: vbht:1250
 msgid "Capturing virtual machine's RUNHASH     : [%s]"
 msgstr ""
 
-#: vbht:1215
+#: vbht:1252
 msgid "Auto-attachment    : [%s]"
 msgstr ""
 
-#: vbht:1216
+#: vbht:1253
 msgid "Keyboard attachment: [%s]"
 msgstr ""
 
-#: vbht:1217
+#: vbht:1254
 msgid "ACPI forwarding    : [%s]"
 msgstr ""
 
-#: vbht:1218
+#: vbht:1255
 msgid "Print-listener     : [%s]"
 msgstr ""
 
-#: vbht:1219
+#: vbht:1256
 msgid "Dedicated X server : [%s]"
 msgstr ""
 
-#: vbht:1246
+#: vbht:1283
 msgid "invalid stoppage type! -- \\`${stop_method}'"
 msgstr ""
 
-#: vbht:1254
+#: vbht:1291
 msgid "stoppage returned non-zero (%d) status!"
 msgstr ""
 
-#: vbht:1264
+#: vbht:1301
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
