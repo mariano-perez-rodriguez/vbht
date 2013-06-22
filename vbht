@@ -179,8 +179,7 @@ setWarns() {
 
 # Try to get a lock on the given lockfile
 # If successful the lockfile will contain the PID of the calling process
-# toghether with any additional strings provided; the file will reside
-# under "/tmp"
+# toghether with any additional strings provided
 #
 # Usage: getLock FILENAME [STRING...]
 # Returns: 0 if successfully acquired lock, 1 otherwise
@@ -194,10 +193,10 @@ getLock() {
   # try at most "LOCKRETRIES" times
   for (( i = 0; i < LOCKRETRIES; i++ )); do
     # try to get lock by using the noclobber option
-    if (set -o noclobber; IFS=':'; echo "$$:${*:2}" > "/tmp/${1}") 2> "${ERRPIPE}"; then return 0; fi
+    if (set -o noclobber; IFS=':'; echo "$$:${*:2}" > "${1}") 2> "${ERRPIPE}"; then return 0; fi
     # get the locking PID (mask errors, in the VERY unlikely case of the
     # file being removed prior to this)
-    otherPID=$(head -n1 -- "/tmp/${1}" 2> "${ERRPIPE}" | cut -d':' -f1 2> "${ERRPIPE}") ||:
+    otherPID=$(head -n1 -- "${1}" 2> "${ERRPIPE}" | cut -d':' -f1 2> "${ERRPIPE}") ||:
     # check for stale
     if (( otherPID )) && kill -0 -- "${otherPID}" 2> "${ERRPIPE}"; then
       # the lock is effectively being held by a running process,
@@ -209,7 +208,7 @@ getLock() {
       echo "${otherPID}"; return 1
     fi
     # the process holding the lock is dead, remove lock...
-    rm -f -- "/tmp/${1}" 2> "${ERRPIPE}"
+    rm -f -- "${1}" 2> "${ERRPIPE}"
   done
   # return failure
   return 1
@@ -222,7 +221,7 @@ getLock() {
 # Outputs: nothing
 addToLock() {
   # locally use ':' as IFS, and append to the lockfile
-  local -r IFS=':'; echo "$$:${*:2}" >> "/tmp/${1}" 2> "${ERRPIPE}"
+  local -r IFS=':'; echo "$$:${*:2}" >> "${1}" 2> "${ERRPIPE}"
 }
 
 # Read the contents of a lockfile
@@ -235,7 +234,7 @@ addToLock() {
 #          the "read" builtin would
 readLock() {
   # try to read the given variables
-  IFS=':' read -r ${@:2} < <(tail -n1 -- "/tmp/${1}" 2> "${ERRPIPE}" ||:)
+  IFS=':' read -r ${@:2} < <(tail -n1 -- "${1}" 2> "${ERRPIPE}" ||:)
 }
 
 # ------------------------------------------------------------------------------
@@ -334,7 +333,7 @@ log() {
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-$RUNHASH}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "/var/log/vbht/${logfile}"
+  echo "[${prevRUNHASH:-$RUNHASH}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "${logfile}"
 }
 
 # Listen to stderr pipe and log
@@ -464,7 +463,7 @@ readonly STDOUTTYPE
 # ------------------------------------------------------------------------------
 
 # lockfile name
-declare -r LOCKFILE='vbht'
+declare -r LOCKFILE='/tmp/vbht'
 
 # maximum lockfile read retries
 declare -ri LOCKRETRIES=7
@@ -474,7 +473,7 @@ declare -ri LOCKRETRIES=7
 # ------------------------------------------------------------------------------
 
 # logfile name
-declare -r LOGFILE='vbht'
+declare -r LOGFILE='/var/log/vbht/vbht'
 
 # hash for this script's run
 declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
@@ -1065,7 +1064,7 @@ if [[ "${action}" == 'S' ]]; then
       # if we have to launch the print listener, do that now
       if [[ "${launch_print_listener}" == 'Y' ]]; then
         # launch the print listener in background
-        printListener "${HOME}/${PRINTDIR}" &
+        printListener "${PRINTDIR}" &
       fi
 
       # if we're going to attach keyboards disable input devices now
