@@ -24,6 +24,7 @@ set -o errexit  # exit on ANY error
 set -E          # propagate errexit
 set -T          # propagate DEBUG and RETURN traps
 
+
 # ==============================================================================
 # == Localisation ==============================================================
 # ==============================================================================
@@ -32,10 +33,101 @@ set -T          # propagate DEBUG and RETURN traps
 #     bash --dump-po-strings vbht | msguniq --no-wrap --sort-by-file > vbht.pot
 
 # set up domain directory
-#@TODO: maybe put it in /opt/vbht???
+# @TODO: maybe put it in /opt/vbht???
 # TEXTDOMAINDIR=/usr/local/share/locale
 # set up domain
 TEXTDOMAIN=vbht
+
+
+# ==============================================================================
+# == Availability ==============================================================
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# -- Stage 0 commands ----------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# the commands needed to get to (and successfully execute) the traps below
+#
+# NB: `tput' is not considered "needed" in the strictest sense: its only
+#     cosmetical
+declare -r STAGEZEROCOMMANDS=('head' 'mkfifo' 'rm' 'tr')
+
+# ------------------------------------------------------------------------------
+# -- Normal commands -----------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# the rest of the needed commands
+declare -r NEEDEDCOMMANDS=('cat' 'cut' 'find' 'grep' 'head' 'inotifywait' 'lpr' 'mkdir' 'readlink' 'sleep' 'sort' 'sudo' 'tail' 'tee' 'xargs' 'xinput' 'vboxmanage' 'VirtualBox')
+
+# ------------------------------------------------------------------------------
+
+# Verify the stage 0 commands exist
+#
+# Usage: verifyStageZero
+# Returns: 0 if successful, exits with error code 1 if not
+# Outputs: error messages to stderr
+# Depends: STAGEZEROCOMMANDS
+#
+# taken from <http://wiki.bash-hackers.org/scripting/style#behaviour_and_robustness>
+verifyStageZero() {
+  local -i missing=0
+  local comm=''
+  # loop through each command
+  for comm in "${STAGEZEROCOMMANDS[@]}"; do
+    # try to hash it (throw away output and errors)
+    if ! hash "$comm" 1> /dev/null 2> /dev/null; then
+      printf '-- '$"Command not found in path: \`%s'"$'\n' "$comm" >&2
+      (( missing++ ))
+    fi
+  done
+  # show additional error message
+  if (( missing )); then
+    if (( missing == 1 )); then
+      printf $"At least one essential command was not found in path!"$'\n' >&2
+    elif (( missing > 1 )); then
+      printf $"At least %d essential commands were not found in path!"$'\n' "$missing" >&2
+    fi
+    printf $"Aborting!"$'\n' >&2
+    exit 1
+  fi
+}
+
+# Verify the stage 0 commands exist
+#
+# Usage: verifyNeededCommands
+# Returns: 0 if successful, exits with error code 1 if not
+# Outputs: error messages to stderr
+# Depends: NEEDEDCOMMANDS
+#
+# taken from <http://wiki.bash-hackers.org/scripting/style#behaviour_and_robustness>
+verifyNeededCommands() {
+  local -i missing=0
+  local comm=''
+  # loop through each command
+  for comm in "${NEEDEDCOMMANDS[@]}"; do
+    # try to hash it (throw away output and errors)
+    if ! hash "$comm" 1> /dev/null 2> /dev/null; then
+      log ${SEV_FATAL} $"Command not found in path: \`%s'" "$comm"
+      (( missing++ ))
+    fi
+  done
+  # show additional error message
+  if (( missing )); then
+    if (( missing == 1 )); then
+      log ${SEV_INFO} $"At least one essential command was not found in path!"
+    elif (( missing > 1 )); then
+      log ${SEV_INFO} $"At least %d essential commands were not found in path!" "$missing"
+    fi
+    log ${SEV_INFO} $"Aborting!"
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------
+
+# actually verify stage 0 commands
+verifyStageZero
 
 
 # ==============================================================================
@@ -202,7 +294,7 @@ getLock() {
   # try at most "LOCKRETRIES" times
   for (( i = 0; i < LOCKRETRIES; i++ )); do
     # try to get lock by using the noclobber option
-    if (set -o noclobber; IFS=':'; echo "$$:${*}" > "${LOCKFILE}") 2> "${ERRPIPE}"; then return 0; fi
+    if (set -o noclobber; IFS=':'; echo "$$:${*}" > "${LOCKFILE}" 2> "${ERRPIPE}"); then return 0; fi
     # get the locking PID (mask errors, in the VERY unlikely case of the
     # file being removed prior to this)
     otherPID=$(head -n1 -- "${LOCKFILE}" 2> "${ERRPIPE}" | cut -d':' -f1 2> "${ERRPIPE}") ||:
@@ -350,7 +442,7 @@ log() {
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-${RUNHASH}}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "${LOGFILE}"
+  echo "[${prevRUNHASH:-${RUNHASH}}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}] ${std_log}" >> "${LOGFILE}"
 }
 
 # Listen to stderr pipe and log
@@ -461,7 +553,7 @@ readonly STDERRTYPE STDOUTTYPE
 # ------------------------------------------------------------------------------
 
 # hash for this script's run
-declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
+declare -r RUNHASH=$(tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 # the previous RUNHASH
 declare prevRUNHASH=''
 # error pipe for this script's run (defined in terms of RUNHASH)
@@ -486,16 +578,16 @@ declare START_FATAL=''   STOP_FATAL=''
 declare START_EMPH=''    STOP_EMPH=''
 # initialise according to STDERRTYPE
 if [[ "${STDERRTYPE}" == 'C' ]]; then
-  START_STDERR="$( tput bold)$(tput setaf 4)" ||: ; STOP_STDERR="$( tput sgr0)" ||:
-  START_DEBUG="$(  tput bold)$(tput setaf 6)" ||: ; STOP_DEBUG="$(  tput sgr0)" ||:
-  START_INFO="$(   tput bold)$(tput setaf 2)" ||: ; STOP_INFO="$(   tput sgr0)" ||:
-  START_WARNING="$(tput bold)$(tput setaf 3)" ||: ; STOP_WARNING="$(tput sgr0)" ||:
-  START_ERROR="$(  tput bold)$(tput setaf 1)" ||: ; STOP_ERROR="$(  tput sgr0)" ||:
-  START_FATAL="$(  tput bold)$(tput setaf 5)" ||: ; STOP_FATAL="$(  tput sgr0)" ||:
+  START_STDERR="$( tput bold 2> /dev/null)$(tput setaf 4 2> /dev/null)" ||: ; STOP_STDERR="$( tput sgr0 2> /dev/null)" ||:
+  START_DEBUG="$(  tput bold 2> /dev/null)$(tput setaf 6 2> /dev/null)" ||: ; STOP_DEBUG="$(  tput sgr0 2> /dev/null)" ||:
+  START_INFO="$(   tput bold 2> /dev/null)$(tput setaf 2 2> /dev/null)" ||: ; STOP_INFO="$(   tput sgr0 2> /dev/null)" ||:
+  START_WARNING="$(tput bold 2> /dev/null)$(tput setaf 3 2> /dev/null)" ||: ; STOP_WARNING="$(tput sgr0 2> /dev/null)" ||:
+  START_ERROR="$(  tput bold 2> /dev/null)$(tput setaf 1 2> /dev/null)" ||: ; STOP_ERROR="$(  tput sgr0 2> /dev/null)" ||:
+  START_FATAL="$(  tput bold 2> /dev/null)$(tput setaf 5 2> /dev/null)" ||: ; STOP_FATAL="$(  tput sgr0 2> /dev/null)" ||:
 fi
 
 if [[ "${STDOUTTYPE}" == 'C' || "${STDOUTTYPE}" == 'M' ]]; then
-  START_EMPH="$(tput bold)" ||: ; STOP_EMPH="$(tput sgr0)" ||:
+  START_EMPH="$(tput bold 2> /dev/null)" ||: ; STOP_EMPH="$(tput sgr0 2> /dev/null)" ||:
 fi
 
 # ------------------------------------------------------------------------------
@@ -647,6 +739,9 @@ errListener &
 : $"Running \`%s' at \`%s:%s'"
 # trap the DEBUG signal and turn it into a log entry
 trap "if [[ \"\${FUNCNAME:-main}\" != 'log' ]]; then log ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
+
+# verify needed commands
+verifyNeededCommands
 
 
 # ==============================================================================
@@ -995,8 +1090,8 @@ if (( verbosity > MAX_VERB )); then (( verbosity = ${MAX_VERB} )); fi
 if (( verbosity < 0        )); then (( verbosity = 0           )); fi
 
 # prevent accidental modification
-readonly action
-readonly verbosity
+readonly action verbosity
+
 
 # ==============================================================================
 # == Actual work ===============================================================
@@ -1027,12 +1122,12 @@ if [[ "${action}" == 'S' ]]; then
   if ! [[ "${vmUUID}" ]]; then log ${SEV_ERROR} $"invalid virtual machine specification! -- \`%s'" "${temp}"; errors='X'
   else
     # try to get lock (mask errors, we're going to check the output)
-    lockingPID=$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}") ||:
+    lockingPID="$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}")" ||:
     # if there's another process using the lock, fail
     if (( lockingPID )); then log ${SEV_ERROR} $"another process is holding the lock with PID %s!" "${lockingPID}"; errors='X'
     else
       # save VirtualBox(R)'s ignored warnings
-      warns=$(getWarns)
+      warns="$(getWarns)"
       # try to set ignored warnings, and fail if we couldn't
       if setWarns "${IGNOREWARNINGS}"; then
         log ${SEV_ERROR} $"setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!" $?; errors='X'
@@ -1052,7 +1147,7 @@ if [[ "${action}" == 'S' ]]; then
       # (in order to avoid unusable virtual machines)
       if [[ "${attach_keyboard}" == 'Y' ]]; then
         # try to disable input devices
-        ret=0; indevs=$(disableKbdsMice) || ret=$?
+        ret=0; indevs="$(disableKbdsMice)" || ret=$?
         if (( ret )); then
           # if disabling failed, yell
           log ${SEV_ERROR} $"disabling input devices (%s) failed, keyboards will NOT be attached!" "${indevs}"; errors='X'
@@ -1107,10 +1202,10 @@ if [[ "${action}" == 'S' ]]; then
       # if we disabled input devices, re-enable them now
       if [[ "${indevs}" ]]; then
         # try to re-enable input devices
-        if ! enableKbdsMice "${indevs}" > "${ERRPIPE}"; then
+        if ! enableKbdsMice "${indevs}" 1> "${ERRPIPE}" 2> "${ERRPIPE}"; then
           # if re-enabling failed, yell and try to re-enable all of them
           log ${SEV_ERROR} $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
-          if ! enableKbdsMice > "${ERRPIPE}"; then log ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
+          if ! enableKbdsMice 1> "${ERRPIPE}" 2> "${ERRPIPE}"; then log ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
         fi
       fi
 
