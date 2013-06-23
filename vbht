@@ -49,8 +49,7 @@ TEXTDOMAIN=vbht
 
 # the commands needed to get to (and successfully execute) the traps below
 #
-# NB: `tput' is not considered "needed" in the strictest sense: its only
-#     cosmetical
+# NB: `tput' is not considered "needed" in the strictest sense: its only cosmetical
 declare -r STAGEZEROCOMMANDS=('head' 'mkfifo' 'rm' 'tr')
 
 # ------------------------------------------------------------------------------
@@ -93,7 +92,7 @@ verifyStageZero() {
   fi
 }
 
-# Verify the stage 0 commands exist
+# Verify the needed commands exist
 #
 # Usage: verifyNeededCommands
 # Returns: 0 if successful, exits with error code 1 if not
@@ -558,8 +557,10 @@ declare -r RUNHASH=$(tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 declare prevRUNHASH=''
 # error pipe for this script's run (defined in terms of RUNHASH)
 declare -r ERRPIPE="/tmp/${RUNHASH}"
+# logfile directory
+declare -r LOGDIR='/var/log/vbht'
 # logfile name
-declare -r LOGFILE='/var/log/vbht/vbht'
+declare -r LOGFILE='${LOGDIR}/vbht'
 
 # maximum user settable verbosity
 declare -ri MAX_VERB=6
@@ -636,6 +637,7 @@ declare -u errors=''
 #  'A'  attach
 #  'F'  forward
 #  'I'  info
+#  'L'  logs
 #  'X'  stop
 declare -u action=''
 
@@ -766,7 +768,13 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
    or: vbht attach [ DEVPATH... ]
    or: vbht forward { power | sleep }
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
-   or: vbht logs [ { UUID | NAME | HASH }... ]
+   or: vbht logs [ { UUID | NAME | HASH }... ] [ -FfEeWwIiDdSs ]
+               [ --fatal ]   [ --no-fatal ]
+               [ --error ]   [ --no-error ]
+               [ --warning ] [ --no-warning ]
+               [ --info ]    [ --no-info ]
+               [ --debug ]   [ --no-debug ]
+               [ --stderr ]  [ --no-stderr ]
    or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
 
 common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
@@ -799,6 +807,19 @@ and USB auto-attachment.
 
       -M, --machine-readable     generate output in machine readable format
       -m, --no-machine-readable  generate output in human readable format
+
+      -F, --fatal       show `fatal' log lines
+      -f, --no-fatal    do NOT show `fatal' log lines
+      -E, --error       show `error' log lines
+      -e, --no-error    do NOT show `error' log lines
+      -W, --warning     show `warning' log lines
+      -w, --no-warning  do NOT show `warning' log lines
+      -I, --info        show `info' log lines
+      -i, --no-info     do NOT show `info' log lines
+      -D, --debug       show `debug' log lines
+      -d, --no-debug    do NOT show `debug' log lines
+      -S, --stderr      show `stderr' log lines
+      -s, --no-stderr   do NOT show `stderr' log lines
 
       -a, --acpi   send ACPI poweroff signal to the capturing virtual machine
       -o, --off    turn the capturing virtual machine off
@@ -1038,6 +1059,9 @@ EOM
         # shift the processed parameter out
         shift 1
       done
+    ;;
+    'logs')
+      action='L'
     ;;
     'stop')
       action='X'
