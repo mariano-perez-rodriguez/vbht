@@ -625,8 +625,6 @@ declare -r IGNOREWARNINGS='confirmGoingFullscreen,confirmGoingSeamless,confirmIn
 # == Option variables ==========================================================
 # ==============================================================================
 
-# @TODO: defend against malicious variable values (ie. malicious VBHT_STOP_METHOD)
-
 # when this variable is non empty we've chanced upon errors
 #  'S'  errors occurred, but be silent about it
 #  'X'  errors occurred which need reporting
@@ -688,6 +686,31 @@ if [[ "${info_machine_readable}" == '' && "${STDOUTTYPE}" == 'O' ]]; then
 else
   info_machine_readable='N'
 fi
+
+# whether FATAL lines are to be shown
+#  'Y'  show FATAL lines
+#  'N'  hide FATAL lines
+declare -u show_fatal='Y'
+# whether ERROR lines are to be shown
+#  'Y'  show ERROR lines
+#  'N'  hide ERROR lines
+declare -u show_error='Y'
+# whether WARNING lines are to be shown
+#  'Y'  show WARNING lines
+#  'N'  hide WARNING lines
+declare -u show_warning='Y'
+# whether INFO lines are to be shown
+#  'Y'  show INFO lines
+#  'N'  hide INFO lines
+declare -u show_info='Y'
+# whether DEBUG lines are to be shown
+#  'Y'  show DEBUG lines
+#  'N'  hide DEBUG lines
+declare -u show_debug='Y'
+# whether STDERR lines are to be shown
+#  'Y'  show STDERR lines
+#  'N'  hide STDERR lines
+declare -u show_stderr='Y'
 
 # minimum severity to report to stderr (ignore errors in case VBHT_VERBOSITY
 # can't parse as integer)
@@ -768,13 +791,14 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
    or: vbht attach [ DEVPATH... ]
    or: vbht forward { power | sleep }
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
-   or: vbht logs [ { UUID | NAME | HASH }... ] [ -FfEeWwIiDdSs ]
+   or: vbht logs [ -FfEeWwIiDdSs ]
                [ --fatal ]   [ --no-fatal ]
                [ --error ]   [ --no-error ]
                [ --warning ] [ --no-warning ]
                [ --info ]    [ --no-info ]
                [ --debug ]   [ --no-debug ]
                [ --stderr ]  [ --no-stderr ]
+               { UUID | NAME | HASH | - ...}
    or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
 
 common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
@@ -849,7 +873,7 @@ Actions: the first argument to vbht must be either `--help', `--version',
       info     return information about the virtual machine currently running
                in capturing mode (if there's one such machine)
       logs     show (coloured) log files for the given virtual machine, or for
-               the currently running one, if there's one such and none given
+               the currently running one, if there's one such and `-' given
       stop     stop the virtual machine currently running in capturing mode
 
 Verbosity: the 6 verbosity levels are `fatal', `error', `warning', `info',
@@ -956,7 +980,7 @@ EOM
             '--kbd-attach'    ) attach_keyboard='Y'       ;; '--no-kbd-attach'    ) attach_keyboard='N'       ;;
             '--acpi-forward'  ) acpi_forward='Y'          ;; '--no-acpi-forward'  ) acpi_forward='N'          ;;
             '--print-listener') launch_print_listener='Y' ;; '--no-print-listener') launch_print_listener='N' ;;
-            '--new-X'         ) use_new_X='Y'             ;; '--no-new-X'         ) use_new_X='Y'             ;;
+            '--new-X'         ) use_new_X='Y'             ;; '--no-new-X'         ) use_new_X='N'             ;;
             # check for verbosity options
             '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
             # check for end-of-options
@@ -970,7 +994,7 @@ EOM
                   'K') attach_keyboard='Y'       ;; 'k') attach_keyboard='N'       ;;
                   'F') acpi_forward='Y'          ;; 'f') acpi_forward='N'          ;;
                   'P') launch_print_listener='Y' ;; 'p') launch_print_listener='N' ;;
-                  'X') use_new_X='Y'             ;; 'x') use_new_X='Y'             ;;
+                  'X') use_new_X='Y'             ;; 'x') use_new_X='N'             ;;
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                   # invalid option
@@ -1062,15 +1086,53 @@ EOM
     ;;
     'logs')
       action='L'
+      # get optional arguments
+      shift 1
+      while (( $# )); do
+        case "${1}" in
+          # check for each long option
+          '--fatal'  ) show_fatal='Y'   ;; '--no-fatal'  ) show_fatal='N'   ;;
+          '--error'  ) show_error='Y'   ;; '--no-error'  ) show_error='N'   ;;
+          '--warning') show_warning='Y' ;; '--no-warning') show_warning='N' ;;
+          '--info'   ) show_info='Y'    ;; '--no-info'   ) show_info='N'    ;;
+          '--debug'  ) show_debug='Y'   ;; '--no-debug'  ) show_debug='N'   ;;
+          '--stderr' ) show_stderr='Y'  ;; '--no-stderr' ) show_stderr='N'  ;;
+          # check for verbosity options
+          '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
+          # check for end-of-options
+          '--') shift 1; break ;;
+          # check for short options
+          -*)
+            # process each in turn
+            for (( i = 1; i < ${#1}; i++ )); do
+              case "${1:$i:1}" in
+                'F') show_fatal='Y'   ;; 'f') show_fatal='N'   ;;
+                'E') show_error='Y'   ;; 'e') show_error='N'   ;;
+                'W') show_warning='Y' ;; 'w') show_warning='N' ;;
+                'I') show_info='Y'    ;; 'i') show_info='N'    ;;
+                'D') show_debug='Y'   ;; 'd') show_debug='N'   ;;
+                'S') show_stderr='Y'  ;; 's') show_stderr='N'  ;;
+                # check for verbosity options
+                'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
+                # invalid option
+                *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+              esac
+            done
+          ;;
+          # invalid option
+          *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+        esac
+        # shift the processed parameter out
+        shift 1
+      done
     ;;
     'stop')
       action='X'
       # get optional arguments
       shift 1
       while (( $# )); do
-
         case "${1}" in
-          # check for each options
+          # check for each option
           '--acpi' ) stop_method='A' ;;
           '--off'  ) stop_method='O' ;;
           '--reset') stop_method='R' ;;
@@ -1272,7 +1334,7 @@ elif [[ "${action}" == 'A' ]]; then
         # prepend "sudo" prefix
         if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
 
-        #process each DEVPATH in turn
+        # process each DEVPATH in turn
         while (( $# )); do
           # get an address from the DEVPATH (mask errors)
           address="$(devpath2address "${1}")" ||:
@@ -1355,6 +1417,22 @@ elif [[ "${action}" == 'I' ]]; then
       printf $"Dedicated X server : [%s]""\n" "${use_new_X}"
     fi
   fi
+
+# ------------------------------------------------------------------------------
+# -- Logs ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+elif [[ "${action}" == 'L' ]]; then
+  #
+  # $@: machine descriptors (either of HASH / NAME / UUID / -)
+  #
+  # show_fatal  : 'Y' / 'N'
+  # show_error  : 'Y' / 'N'
+  # show_warning: 'Y' / 'N'
+  # show_info   : 'Y' / 'N'
+  # show_debug  : 'Y' / 'N'
+  # show_stderr : 'Y' / 'N'
+  #
 
 # ------------------------------------------------------------------------------
 # -- Stop ----------------------------------------------------------------------
