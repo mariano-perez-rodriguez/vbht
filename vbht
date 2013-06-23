@@ -794,12 +794,12 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
    or: vbht forward { power | sleep }
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
    or: vbht logs [ -FfEeWwIiDdSs ]
-               [ --fatal ]   [ --no-fatal ]
-               [ --error ]   [ --no-error ]
-               [ --warning ] [ --no-warning ]
-               [ --info ]    [ --no-info ]
-               [ --debug ]   [ --no-debug ]
-               [ --stderr ]  [ --no-stderr ]
+               [ --show-fatal ]   [ --no-show-fatal ]
+               [ --show-error ]   [ --no-show-error ]
+               [ --show-warning ] [ --no-show-warning ]
+               [ --show-info ]    [ --no-show-info ]
+               [ --show-debug ]   [ --no-show-debug ]
+               [ --show-stderr ]  [ --no-show-stderr ]
                { UUID | NAME | HASH | - ...}
    or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
 
@@ -834,18 +834,18 @@ and USB auto-attachment.
       -M, --machine-readable     generate output in machine readable format
       -m, --no-machine-readable  generate output in human readable format
 
-      -F, --fatal       show `fatal' log lines
-      -f, --no-fatal    do NOT show `fatal' log lines
-      -E, --error       show `error' log lines
-      -e, --no-error    do NOT show `error' log lines
-      -W, --warning     show `warning' log lines
-      -w, --no-warning  do NOT show `warning' log lines
-      -I, --info        show `info' log lines
-      -i, --no-info     do NOT show `info' log lines
-      -D, --debug       show `debug' log lines
-      -d, --no-debug    do NOT show `debug' log lines
-      -S, --stderr      show `stderr' log lines
-      -s, --no-stderr   do NOT show `stderr' log lines
+      -F, --show-fatal       show `fatal' log lines
+      -f, --no-show-fatal    do NOT show `fatal' log lines
+      -E, --show-error       show `error' log lines
+      -e, --no-show-error    do NOT show `error' log lines
+      -W, --show-warning     show `warning' log lines
+      -w, --no-show-warning  do NOT show `warning' log lines
+      -I, --show-info        show `info' log lines
+      -i, --no-show-info     do NOT show `info' log lines
+      -D, --show-debug       show `debug' log lines
+      -d, --no-show-debug    do NOT show `debug' log lines
+      -S, --show-stderr      show `stderr' log lines
+      -s, --no-show-stderr   do NOT show `stderr' log lines
 
       -a, --acpi   send ACPI poweroff signal to the capturing virtual machine
       -o, --off    turn the capturing virtual machine off
@@ -1093,12 +1093,12 @@ EOM
       while (( $# )); do
         case "${1}" in
           # check for each long option
-          '--fatal'  ) show_fatal='Y'   ;; '--no-fatal'  ) show_fatal='N'   ;;
-          '--error'  ) show_error='Y'   ;; '--no-error'  ) show_error='N'   ;;
-          '--warning') show_warning='Y' ;; '--no-warning') show_warning='N' ;;
-          '--info'   ) show_info='Y'    ;; '--no-info'   ) show_info='N'    ;;
-          '--debug'  ) show_debug='Y'   ;; '--no-debug'  ) show_debug='N'   ;;
-          '--stderr' ) show_stderr='Y'  ;; '--no-stderr' ) show_stderr='N'  ;;
+          '--show-fatal'  ) show_fatal='Y'   ;; '--no-show-fatal'  ) show_fatal='N'   ;;
+          '--show-error'  ) show_error='Y'   ;; '--no-show-error'  ) show_error='N'   ;;
+          '--show-warning') show_warning='Y' ;; '--no-show-warning') show_warning='N' ;;
+          '--show-info'   ) show_info='Y'    ;; '--no-show-info'   ) show_info='N'    ;;
+          '--show-debug'  ) show_debug='Y'   ;; '--no-show-debug'  ) show_debug='N'   ;;
+          '--show-stderr' ) show_stderr='Y'  ;; '--no-show-stderr' ) show_stderr='N'  ;;
           # check for verbosity options
           '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
           # check for end-of-options
@@ -1527,6 +1527,7 @@ elif [[ "${action}" == 'X' ]]; then
     fi
   fi
 fi
+
 
 # ==============================================================================
 # == Finalisation ==============================================================
