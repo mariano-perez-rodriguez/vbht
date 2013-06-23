@@ -1,0 +1,51 @@
+#: openx:108
+msgid "Error: no arguments provided!"
+msgstr ""
+
+#: openx:164
+msgid "Warning: \\`--help' is supposed to be the ONLY argument given!"
+msgstr ""
+
+#: openx:181
+msgid "Warning: \\`--version' is supposed to be the ONLY argument given!"
+msgstr ""
+
+#: openx:189
+msgid "Warning: \\`--license' is supposed to be the ONLY argument given!"
+msgstr ""
+
+#: openx:211
+msgid "Error: the argument \\`%s' does not denote a known command!"
+msgstr ""
+
+#: openx:219
+msgid "Error: no lone \\`--' tokens allowed!"
+msgstr ""
+
+#: openx:223 openx:280
+msgid "Try \\`%s --help' for more information."
+msgstr ""
+
+#: openx:260
+msgid "Error: cannot determine the current user's id!"
+msgstr ""
+
+#: openx:261
+msgid "Error: cannot determine the previous user's id!"
+msgstr ""
+
+#: openx:272
+msgid "Error: chaining is not allowed!"
+msgstr ""
+
+#: openx:273
+msgid "Error: root can't do this!"
+msgstr ""
+
+#: openx:275
+msgid "Error: you are not root!"
+msgstr ""
+
+#: openx:327
+msgid "Warning: openvt returned non-zero (%d) status!"
+msgstr ""
