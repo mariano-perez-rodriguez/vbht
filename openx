@@ -22,6 +22,21 @@ set +H          # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
 set -o nounset  # be merciless about unset variables
 set -o errexit  # exit on ANY error
 
+
+# ==============================================================================
+# == Localisation ==============================================================
+# ==============================================================================
+
+# NB: in order to obtain the pot file for openx do:
+#     bash --dump-po-strings openx | msguniq --no-wrap --sort-by-file > openx.pot
+
+# set up domain directory
+# @TODO: maybe put it in /opt/vbht???
+# TEXTDOMAINDIR=/usr/local/share/locale
+# set up domain
+TEXTDOMAIN=openx
+
+
 # ==============================================================================
 # == Constants =================================================================
 # ==============================================================================
@@ -30,7 +45,7 @@ set -o errexit  # exit on ANY error
 declare -r loneddash='.*[[:space:]]--[[:space:]].*'
 
 # `sudo_cmd' will hold the "canonical" sudo command
-declare -r sudo_cmd=$(type -ap 'sudo' | head -n1)
+declare -r sudo_cmd="$(type -ap 'sudo' | head -n1)"
 
 # `root_user' will hold root's UID (0)
 declare -ri root_user=0
@@ -38,14 +53,14 @@ declare -ri root_user=0
 # curr_user' will hold the UID of the current process (or -1 in case of errors)
 # (this is the second field in the line which starts "Uid:..." in the contents
 # of /proc/$$/status)
-declare -ri curr_user=$(set -o pipefail; grep -ie '^uid:' "/proc/$$/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')
+declare -ri curr_user="$(set -o pipefail; grep -ie '^uid:' "/proc/$$/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')"
 
 # `display_len' holds the display number's length in digits
 declare -ri display_len=10
 
 # new_display will get generated as a number display_len digits long, starting
 # with a non zero digit
-declare -ri display_new=$(tr -cd 123456789 < /dev/urandom | head -c1; tr -cd 0123456789 < /dev/urandom | head -c$(( display_len - 1 )))
+declare -ri display_new="$(tr -cd 123456789 < /dev/urandom | head -c1; tr -cd 0123456789 < /dev/urandom | head -c$(( display_len - 1 )))"
 
 
 # ==============================================================================
@@ -70,6 +85,7 @@ declare -u sim='N'
 #  'N'  leave it be
 declare -u noptr='N'
 
+
 # ==============================================================================
 # == State variables ===========================================================
 # ==============================================================================
@@ -83,12 +99,13 @@ declare -i ret=0
 # `line' will hold the final line to be executed
 declare line=''
 
+
 # ==============================================================================
 # == Arguments check ===========================================================
 # ==============================================================================
 
 # we must have at least one argument
-if (( $# == 0 )); then echo 'Error: no arguments provided!' >&2; errors='X'
+if (( $# == 0 )); then echo $"Error: no arguments provided!" >&2; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
@@ -144,7 +161,7 @@ Written by Mariano Perez Rodriguez.
 Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--help' not being the only argument given :P
-     if (( $# != 1 )); then echo "Warning: \`--help' is supposed to be the ONLY argument given!" >&2; fi
+     if (( $# != 1 )); then echo $"Warning: \`--help' is supposed to be the ONLY argument given!" >&2; fi
     exit 0
   fi
 
@@ -161,7 +178,7 @@ Written by Mariano Perez Rodriguez.
 Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--version' not being the only argument given :P
-    if (( $# != 1 )); then echo "Warning: \`--version' is supposed to be the ONLY argument given!" >&2; fi
+    if (( $# != 1 )); then echo $"Warning: \`--version' is supposed to be the ONLY argument given!" >&2; fi
     exit 0
   fi
 
@@ -169,7 +186,7 @@ EOM
   if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
     /usr/bin/env pager /opt/vbht/agplv3
     # just be obnoxious about `--license' not being the only argument given :P
-    if (( $# != 1 )); then echo "Warning: \`--license' is supposed to be the ONLY argument given!" >&2; fi
+    if (( $# != 1 )); then echo $"Warning: \`--license' is supposed to be the ONLY argument given!" >&2; fi
     exit 0
   fi
 
@@ -191,7 +208,7 @@ EOM
   # prevent accidental modification
   readonly comm
   # check to see if the command exists
-  if [[ "${comm}" == '' ]]; then echo "Error: the argument \`${1}' does not denote a known command!" >&2; errors='X'; fi
+  if [[ "${comm}" == '' ]]; then printf $"Error: the argument \`%s' does not denote a known command!" "${1}" >&2; errors='X'; fi
 
   # shift arguments, we already have the command in $comm, be there errors or
   # not, they've already been reported
@@ -199,11 +216,11 @@ EOM
   shift
 
   # we don't allow lone `--' tokens in order not to confuse xinit, since it's effectively braindead when it comes to argument order
-  if [[ " $@ " =~ ${loneddash} ]]; then echo "Error: no lone \`--' tokens allowed!" >&2; errors='X'; fi
+  if [[ " $@ " =~ ${loneddash} ]]; then echo $"Error: no lone \`--' tokens allowed!" >&2; errors='X'; fi
 fi
 
 # in case of errors, show info and exit
-if [[ "${errors}" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 1; fi
+if [[ "${errors}" ]]; then printf $"Try \`%s --help' for more information." "${0##*/}" >&2; exit 1; fi
 
 
 # ==============================================================================
@@ -225,23 +242,23 @@ if [[ "${errors}" ]]; then echo "Try \`${0##*/} --help' for more information." >
 #   (`prev_pid' will be our "iterator")
 declare -i prev_pid=$$; until (( prev_pid <= 1 )); do
   # in case the ancestor's program is our "sudo"
-  if [[ $(readlink -e "/proc/${prev_pid}/exe") == "${sudo_cmd}" ]]; then
+  if [[ "$(readlink -e "/proc/${prev_pid}/exe")" == "${sudo_cmd}" ]]; then
     # go get the process which launched it
-    prev_pid=$(cut -d' ' -f4 "/proc/${prev_pid}/stat")
+    (( prev_pid = $(cut -d' ' -f4 "/proc/${prev_pid}/stat") ))
     # get its UID and exit
-    prev_user=$(set -o pipefail; grep -ie '^uid:' "/proc/${prev_pid}/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1')
+    (( prev_user = $(set -o pipefail; grep -ie '^uid:' "/proc/${prev_pid}/status" 2> /dev/null | tr -s '[:space:]' ' ' | cut -d' ' -f2 || echo '-1') ))
     break
   fi
   # otherwise, just keep looking
-  prev_pid=$(cut -d' ' -f4 "/proc/${prev_pid}/stat")
+  (( prev_pid = $(cut -d' ' -f4 "/proc/${prev_pid}/stat") ))
 done; unset prev_pid
 
 # prevent accidental modification
 readonly prev_user
 
 # fail if we don't have enough information about the users
-if (( curr_user == -1 )); then echo "Error: cannot determine the current user's id!"  >&2; errors='X'; fi
-if (( prev_user == -1 )); then echo "Error: cannot determine the previous user's id!" >&2; errors='X'; fi
+if (( curr_user == -1 )); then echo $"Error: cannot determine the current user's id!"  >&2; errors='X'; fi
+if (( prev_user == -1 )); then echo $"Error: cannot determine the previous user's id!" >&2; errors='X'; fi
 
 # if we know the relevant user names
 if [[ "${errors}" == '' ]]; then
@@ -252,18 +269,19 @@ if [[ "${errors}" == '' ]]; then
   #       NOTE: we only show this if there have been no previous errors, in
   #             order to avoid the awkward-looking message combo "root can't do
   #             this!" + "you are not root!".
-  if (( prev_user == curr_user )); then echo "Error: chaining is not allowed!" >&2; errors='X'; fi
-  if (( prev_user == root_user )); then echo "Error: root can't do this!"      >&2; errors='X'; fi
+  if (( prev_user == curr_user )); then echo $"Error: chaining is not allowed!" >&2; errors='X'; fi
+  if (( prev_user == root_user )); then echo $"Error: root can't do this!"      >&2; errors='X'; fi
   if [[ "${errors}" == '' ]]; then
-    if (( curr_user != root_user )); then echo 'Error: you are not root!' >&2; errors='X'; fi
+    if (( curr_user != root_user )); then echo $"Error: you are not root!" >&2; errors='X'; fi
   fi
 fi
 
 # in case of errors, show info and exit
-if [[ "${errors}" ]]; then echo "Try \`${0##*/} --help' for more information." >&2; exit 2; fi
+if [[ "${errors}" ]]; then printf $"Try \`%s --help' for more information." "${0##*/}" >&2; exit 2; fi
 
 # no longer needed
 unset errors
+
 
 # ==============================================================================
 # == Actual work ===============================================================
@@ -306,7 +324,7 @@ else
   # prevent accidental modification
   readonly ret
   # just be obnoxious about `openvt' not having returned 0 :/
-  if (( ret )); then echo "Warning: openvt returned non-zero (${ret}) status!" >&2; fi
+  if (( ret )); then printf $"Warning: openvt returned non-zero (%d) status!" ${ret} >&2; fi
 fi
 
 
