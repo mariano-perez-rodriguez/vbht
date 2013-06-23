@@ -551,8 +551,10 @@ readonly STDERRTYPE STDOUTTYPE
 # -- Log-related constants -----------------------------------------------------
 # ------------------------------------------------------------------------------
 
+# hash's length (in characters / bytes)
+declare -i HASHLENGTH=64
 # hash for this script's run
-declare -r RUNHASH=$(tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
+declare -r RUNHASH=$(tr -cd '[:alnum:]' < /dev/urandom | head -c "${HASHLENGTH}")
 # the previous RUNHASH
 declare prevRUNHASH=''
 # error pipe for this script's run (defined in terms of RUNHASH)
@@ -748,7 +750,7 @@ declare line=''
 declare -i ret=0
 
 # generic temporary
-temp=''
+declare temp=''
 # generic iterator
 declare -i i=0
 
@@ -1101,6 +1103,8 @@ EOM
           '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
           # check for end-of-options
           '--') shift 1; break ;;
+          # check for "currently running machine" descriptor
+          '-') break ;;
           # check for short options
           -*)
             # process each in turn
@@ -1115,12 +1119,21 @@ EOM
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                 # invalid option
-                *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                *)
+                  # if this is the very first character, then this may very well be
+                  # a HASH, UUID, or NAME
+                  if (( i == 1 )); then
+                    break
+                  else
+                    # otherwise, this is just an error
+                    log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X'
+                  fi
+                ;;
               esac
             done
           ;;
-          # invalid option
-          *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+          # invalid option, can only be a descriptor
+          *) break ;;
         esac
         # shift the processed parameter out
         shift 1
@@ -1253,6 +1266,8 @@ if [[ "${action}" == 'S' ]]; then
       # evaluate launch line (no point in checking exit code, as the line is run
       # in the background) and get its PID
       eval -- "${line}" & vbPID=$!
+      # let the log know about this
+      log ${SEV_OTHER} "STARTED ${vmUUID}"
 
       # wait for the VM to become available, recover if it timed out
       if ! waitRunning "${vmUUID}"; then
@@ -1433,6 +1448,47 @@ elif [[ "${action}" == 'L' ]]; then
   # show_debug  : 'Y' / 'N'
   # show_stderr : 'Y' / 'N'
   #
+
+  # set up severity pattern values
+  temp=''
+  if [[ "${show_fatal}"   == 'Y' ]]; then temp="${temp}F"; fi
+  if [[ "${show_error}"   == 'Y' ]]; then temp="${temp}E"; fi
+  if [[ "${show_warning}" == 'Y' ]]; then temp="${temp}W"; fi
+  if [[ "${show_info}"    == 'Y' ]]; then temp="${temp}I"; fi
+  if [[ "${show_debug}"   == 'Y' ]]; then temp="${temp}D"; fi
+  if [[ "${show_stderr}"  == 'Y' ]]; then temp="${temp}S"; fi
+
+  # process each descriptor in turn
+  # general idea:
+  # - each argument is first checked, and translated to a RUNHASH
+  #   (NAME / UUID / - descriptors are "dereferenced") and pushed
+  #   into an array for later processing
+  # - once there are no more arguments left, process the array in
+  #   question one item at a time using the severity pattern
+  while (( $# )); do
+    # check for "currently running machine" descriptor
+    if [[ "${1}" == '-' ]]; then
+      # - go read the lock file
+      # - if there's no machine running, yell and be done with it
+      # - if there's a machine running, get the RUNHASH and push it
+      :
+    else
+      # this can either be a a machine's UUID, NAME, or HASH
+      # - ask getUUID() to look for a machine thus identified
+      # - if getUUID() failed, assume its a RUNHASH and push it,
+      # - otherwise, scan the logs to get all the RUNHASHes matching
+      #   the resulting UUID, push them all to the array
+      :
+    fi
+
+    # shift the processed parameter out
+    shift 1
+  done
+
+  # the actual magic comes here: the array will be holding RUNHASHes
+  # into the logs; take each in turn and, using the severity pattern
+  # show each to the user.
+
 
 # ------------------------------------------------------------------------------
 # -- Stop ----------------------------------------------------------------------
