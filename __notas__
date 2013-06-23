@@ -30,10 +30,10 @@ DONE:
 
 + reorganizar temas de paths (ie. que el logfile apunte al path completo, no solo al nombre hardcodeando "/tmp")
 
++ reorganizar el orden en el que se declaran / lanzan los comandos, sobre todo al principio de todo, cuando se lanzan los traps
+
 
 TODO:
-
-- reorganizar el orden en el que se declaran / lanzan los comandos, sobre todo al principio de todo, cuando se lanzan los traps
 
 - ver si el artilugio de leer con "<>" se puede usar para simplificar el printListener()
 
@@ -53,4 +53,3 @@ TODO:
     ver "Testing and debugging > Putting your rules into action"
 
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
-

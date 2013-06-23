@@ -51,6 +51,7 @@ TEXTDOMAIN=vbht
 # Usage: getUUID { NAME | UUID }
 # Returns: 0 if successful, 1 if errors or none found
 # Outputs: UUID if found, empty otherwise
+# Depends: nothing
 getUUID() {
   # use newline as the IFS, since newline is not a valid part of either the UUID
   # nor the name of a VM
@@ -69,15 +70,16 @@ getUUID() {
 # Usage: devpath2address DEVPATH
 # Returns: 0 if successful, 1 if errors or none found
 # Outputs: UUID if found, empty otherwise
+# Depends: nothing
 devpath2address() {
   # use newline as the IFS, since newline is not a valid part of a devpath
-  local IFS=$'\n'
+  local -r IFS=$'\n'
   # make sure we remove a "/sys" prefix and a "/" suffix from the devpath: we accept
   # it as input, but there's no need for it
   local devpath="${1#/sys}"; devpath="${devpath%/}"; readonly devpath
   # list host usbs, take only the "Address" lines which match the given devpath,
   # take only the actual values of those lines,
-  local -a temp=($(vboxmanage list usbhost | grep -e "^Address:[[:space:]]*sysfs:/sys${devpath}//device:/dev/vboxusb/[[:graph:]]*$" | grep -oe '[^[:space:]]*$'))
+  local -ar temp=($(vboxmanage list usbhost | grep -e "^Address:[[:space:]]*sysfs:/sys${devpath}//device:/dev/vboxusb/[[:graph:]]*$" | grep -oe '[^[:space:]]*$'))
   # if we found anything other than a single value, return failure
   if ! (( ${#temp[@]} == 1 )); then return 1; fi
   # echo and return success
@@ -89,14 +91,16 @@ devpath2address() {
 # ask for the state of the virtual machine UUID "UUID", up to "MAX_RETRIES"
 # times, exiting if the machine in question is not in "starting" state
 #
-# Usage: waitRunning UUID INIT_DWELL INT_DWELL MAX_TRIES
+# Usage: waitRunning UUID
 # Returns: 0 if successful, 1 if timed out or errors encountered
 # Outputs: nothing
+# Depends: KBDATTACHINIDWELL, KBDATTACHINTDWELL, KBDATTACHMAXTRIES,
+#          ERRPIPE
 waitRunning() {
   local  -i i=0
-  local -ri l="${4}"
+  local -ri l="${KBDATTACHMAXTRIES}"
   # wait initial dwell time
-  sleep -- "${2}s"
+  sleep -- "${KBDATTACHINIDWELL}s"
   for (( i = 0; i < l; i++ )); do
     # get virtual machine's state and exit successfully if "running",
     # unsuccessfully if not in "starting"
@@ -104,7 +108,7 @@ waitRunning() {
       'running') return 0 ;; 'starting') : ;; *) return 1;;
     esac
     # wait internal dwell time
-    sleep -- "${3}s"
+    sleep -- "${KBDATTACHINTDWELL}s"
   done
   # we timed out, too bad
   return 1
@@ -115,6 +119,7 @@ waitRunning() {
 # Usage: attachKbds UUID
 # Returns: 0 if successful, 1 if errors encountered
 # Outputs: nothing
+# Depends: devpath2address(), ERRPIPE
 attachKbds() {
   local temp=''
   local -i ret=0
@@ -150,6 +155,7 @@ attachKbds() {
 # Usage: getWarns
 # Returns: 0, if successful
 # Outputs: a sorted, comma-separated list of values
+# Depends: ERRPIPE
 getWarns() {
   # get VirtualBox(R)'s warnings (ignoring an unset property), strip the title,
   # turn the comma-separated list into a newline-separated list, remove empty
@@ -164,6 +170,7 @@ getWarns() {
 # Usage: setWarns [WARNING_LIST...]
 # Returns: whatever "vboxmanage setextradata GUI/SuppressMessages" does
 # Outputs: nothing
+# Depends: ERRPIPE
 #
 # NOTE: WARNING_LIST is a comma-separated list of warnings
 setWarns() {
@@ -178,13 +185,14 @@ setWarns() {
 # -- Lock functions ------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# Try to get a lock on the given lockfile
+# Try to get a lock on the lockfile
 # If successful the lockfile will contain the PID of the calling process
 # toghether with any additional strings provided
 #
-# Usage: getLock FILENAME [STRING...]
+# Usage: getLock [STRING...]
 # Returns: 0 if successfully acquired lock, 1 otherwise
 # Outputs: nothing if successful, the PID of the locking process otherwise
+# Depends: LOCKFILE, LOCKRETRIES, ERRPIPE
 #
 # NOTE: this functions does NOT provide for error hardening, you need
 #       to set traps and remember to remove the lock yourself
@@ -194,10 +202,10 @@ getLock() {
   # try at most "LOCKRETRIES" times
   for (( i = 0; i < LOCKRETRIES; i++ )); do
     # try to get lock by using the noclobber option
-    if (set -o noclobber; IFS=':'; echo "$$:${*:2}" > "${1}") 2> "${ERRPIPE}"; then return 0; fi
+    if (set -o noclobber; IFS=':'; echo "$$:${*}" > "${LOCKFILE}") 2> "${ERRPIPE}"; then return 0; fi
     # get the locking PID (mask errors, in the VERY unlikely case of the
     # file being removed prior to this)
-    otherPID=$(head -n1 -- "${1}" 2> "${ERRPIPE}" | cut -d':' -f1 2> "${ERRPIPE}") ||:
+    otherPID=$(head -n1 -- "${LOCKFILE}" 2> "${ERRPIPE}" | cut -d':' -f1 2> "${ERRPIPE}") ||:
     # check for stale
     if (( otherPID )) && kill -0 -- "${otherPID}" 2> "${ERRPIPE}"; then
       # the lock is effectively being held by a running process,
@@ -209,7 +217,7 @@ getLock() {
       echo "${otherPID}"; return 1
     fi
     # the process holding the lock is dead, remove lock...
-    rm -f -- "${1}" 2> "${ERRPIPE}"
+    rm -f -- "${LOCKFILE}" 2> "${ERRPIPE}"
   done
   # return failure
   return 1
@@ -217,25 +225,27 @@ getLock() {
 
 # Add a line to the lockfile
 #
-# Usage: addToLock FILENAME [STRING...]
+# Usage: addToLock [STRING...]
 # Returns: 0 if ok, nonzero on errors
 # Outputs: nothing
+# Depends: LOCKFILE, ERRPIPE
 addToLock() {
   # locally use ':' as IFS, and append to the lockfile
-  local -r IFS=':'; echo "$$:${*:2}" >> "${1}" 2> "${ERRPIPE}"
+  local -r IFS=':'; echo "$$:${*}" >> "${LOCKFILE}" 2> "${ERRPIPE}"
 }
 
-# Read the contents of a lockfile
+# Read the contents of the lockfile
 # Read the LAST line in the lockfile; use the last line, as the lockfile
 # may have been added to
 #
-# Usage: readLock FILENAME [VAR...]
+# Usage: readLock [VAR...]
 # Returns: 0 if successful, 1 if there's no lockfile
 # Outputs: nothing, but it modifies the values of the given variables as
 #          the "read" builtin would
+# Depends: LOCKFILE, ERRPIPE
 readLock() {
   # try to read the given variables
-  IFS=':' read -r ${@:2} < <(tail -n1 -- "${1}" 2> "${ERRPIPE}" ||:)
+  IFS=':' read -r ${@:2} < <(tail -n1 -- "${LOCKFILE}" 2> "${ERRPIPE}" ||:)
 }
 
 # ------------------------------------------------------------------------------
@@ -247,6 +257,7 @@ readLock() {
 # Usage: disableKbdsMice [XID_LIST...]
 # Returns: 0, always
 # Outputs: a sorted, comma-separated list of disabled XIDs
+# Depends: ERRPIPE
 #
 # NOTE: XID_LIST is a comma-separated list of XIDs
 disableKbdsMice() {
@@ -274,6 +285,7 @@ disableKbdsMice() {
 # Usage: enableKbdsMice [XID_LIST...]
 # Returns: 0, always
 # Outputs: a sorted, comma-separated list of enabled XIDs
+# Depends: ERRPIPE
 #
 # NOTE: XID_LIST is a comma-separated list of XIDs
 enableKbdsMice() {
@@ -305,13 +317,17 @@ enableKbdsMice() {
 # and, depending on the value of "verbosity", output STRING... to stderr
 # using a `BASH-printf'-life format.
 #
-# Usage: log LOGFILE SEVERITY FORMAT [PARAMS...]
+# Usage: log SEVERITY FORMAT [PARAMS...]
 # Returns: 0, always
 # Outputs: depending on settings, it may output STRING... to stderr
+# Depends: verbosity, LOGFILE, SEV_FATAL, SEV_ERROR, SEV_WARNING, SEV_INFO,
+#          SEV_DEBUG, SEV_STDERR, START_FATAL, STOP_FATAL, START_ERROR,
+#          STOP_ERROR, START_WARNING, STOP_WARNING, START_INFO,
+#          STOP_INFO, START_DEBUG, STOP_DEBUG, START_STDERR,
+#          STOP_STDERR, prevRUNHASH, RUNHASH, ERRPIPE
 log() {
-  # get log file name and severity (declare severity "name" too)
-  local -r  logfile="${1}"
-  local -ri severity="${2}"
+  # get severity (declare severity "name" too)
+  local -ri severity="${1}"
   local -u  sev_name=''
   # set up temporaries
   local std_err=''
@@ -319,43 +335,47 @@ log() {
 
   # prepend severity type string to output line (don't do anything for
   # unrecognised severities) and build stderr and stdlog temporaries
-  if   (( severity == 1 )); then sev_name='F'; std_err="${START_FATAL}"$"Fatal"":${STOP_FATAL}"      ; std_log=$"Fatal"':'
-  elif (( severity == 2 )); then sev_name='E'; std_err="${START_ERROR}"$"Error"":${STOP_ERROR}"      ; std_log=$"Error"':'
-  elif (( severity == 3 )); then sev_name='W'; std_err="${START_WARNING}"$"Warning"":${STOP_WARNING}"; std_log=$"Warning"':'
-  elif (( severity == 4 )); then sev_name='I'; std_err="${START_INFO}"$"Info"":${STOP_INFO}"         ; std_log=$"Info"':'
-  elif (( severity == 5 )); then sev_name='D'; std_err="${START_DEBUG}"$"Debug"":${STOP_DEBUG}"      ; std_log=$"Debug"':'
-  elif (( severity == 6 )); then sev_name='S'; std_err="${START_STDERR}"$"Stderr"":${STOP_STDERR}"   ; std_log=$"Stderr"':'
-  else                           sev_name='O'
+  if   (( severity == SEV_FATAL   )); then sev_name='F'; std_err="${START_FATAL}"$"Fatal"":${STOP_FATAL}"      ; std_log=$"Fatal"':'
+  elif (( severity == SEV_ERROR   )); then sev_name='E'; std_err="${START_ERROR}"$"Error"":${STOP_ERROR}"      ; std_log=$"Error"':'
+  elif (( severity == SEV_WARNING )); then sev_name='W'; std_err="${START_WARNING}"$"Warning"":${STOP_WARNING}"; std_log=$"Warning"':'
+  elif (( severity == SEV_INFO    )); then sev_name='I'; std_err="${START_INFO}"$"Info"":${STOP_INFO}"         ; std_log=$"Info"':'
+  elif (( severity == SEV_DEBUG   )); then sev_name='D'; std_err="${START_DEBUG}"$"Debug"":${STOP_DEBUG}"      ; std_log=$"Debug"':'
+  elif (( severity == SEV_STDERR  )); then sev_name='S'; std_err="${START_STDERR}"$"Stderr"":${STOP_STDERR}"   ; std_log=$"Stderr"':'
+  else                                     sev_name='O'
   fi
   # fill stderr and stdlog temporaries up with printf output
-  std_err="${std_err} $(printf "${3}" "${@:4}" 2> "${ERRPIPE}")"
-  std_log="${std_log} $(printf "${3}" "${@:4}" 2> "${ERRPIPE}")"
+  std_err="${std_err} $(printf "${2}" "${@:3}" 2> "${ERRPIPE}")"
+  std_log="${std_log} $(printf "${2}" "${@:3}" 2> "${ERRPIPE}")"
 
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-${RUNHASH}}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "${logfile}"
+  echo "[${prevRUNHASH:-${RUNHASH}}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "${LOGFILE}"
 }
 
 # Listen to stderr pipe and log
 #
-# Continuously read from FIFO and log whatever gets read as SEV_STDERR
+# Continuously read from ERRPIPE and log whatever gets read as SEV_STDERR
 #
-# Usage errListener FIFO [&]
+# Usage errListener [&]
 # Returns: 0, always
 # Outputs: nothing
+# Depends: log(), ERRPIPE, SEV_STDERR, LOGFILE
 errListener() {
-  # get pipe
-  local -r pipe="${1}"
+  # create the ERRPIPE FIFO
+  # @TODO: set up permissions on mkfifo with the "-m" parameter
+  mkfifo "${ERRPIPE}"
+  # trap EXIT so that we may remove the FIFO pipe
+  trap "rm -f -- '${ERRPIPE}'" EXIT
+
   # set up temporary
   local line=''
-
   # while there's a (raw) line to be read
   while IFS= read -r line; do
     # if it's not blank, log it with SEV_STDERR
-    if [[ "${line}" ]]; then log "${LOGFILE}" ${SEV_STDERR} "${line}"; fi
+    if [[ "${line}" ]]; then log ${SEV_STDERR} "${line}"; fi
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
-  done <> "${pipe}"
+  done <> "${ERRPIPE}"
 }
 
 # ------------------------------------------------------------------------------
@@ -363,20 +383,22 @@ errListener() {
 # ------------------------------------------------------------------------------
 
 # Start print-listening on the given directory in the background
-# The given DIRECTORY is created (if not already existing), and, upon file
+# The given PRINTDIR is created (if not already existing), and, upon file
 # creation, the file in question is fed to "lpr" for printing; the printListener
-# will commit suicide if DIRECTORY is erased (and is the ONLY way of safely
+# will commit suicide if PRINTDIR is erased (and is the ONLY way of safely
 # and cleanly terminating the printListener).
-# Usage: printListener DIRECTORY [&]
+# Usage: printListener [&]
 # Returns: 1 in case of errors, IT DOES NOT RETURN IF SUCCESSFUL (it will be
 #          listening for files to print, no time to return at all); thus the
 #          preferred background terminator in "Usage"
 # Outputs: nothing
+# Depends: log(), PRINTDIR, SEV_STDERR, LOGFILE, ERRPIPE
+#
 # Taken from: https://github.com/rvoicilas/inotify-tools/issues/5#issuecomment-17756009
 printListener() {
   local temp=''
   # get the canonical path to the directory and create it if it doesn't exist
-  local -r dir="$(readlink -m -- "${1}" 2> "${ERRPIPE}")"; mkdir -p "${dir}"
+  local -r dir="$(readlink -m -- "${PRINTDIR}" 2> "${ERRPIPE}")"; mkdir -p "${dir}"
 
   # (safely) ignore SIGPIPE
   trap ':' SIGPIPE
@@ -398,7 +420,7 @@ printListener() {
       # when done (if there are errors, log them)
       (
         if ! lpr -hr "${dir}/${file}"; then
-          log "${LOGFILE}" ${SEV_ERROR} $"lpr returned non-zero (%d) status" $?
+          log ${SEV_ERROR} $"lpr returned non-zero (%d) status" $?
         else
           rm -f -- "${dir}/${file}"
         fi
@@ -435,27 +457,17 @@ if [[ -t 2 ]]; then if (( $(tput colors 2> /dev/null) >= 8 )); then STDERRTYPE='
 readonly STDERRTYPE STDOUTTYPE
 
 # ------------------------------------------------------------------------------
-# -- Lock-related constants ----------------------------------------------------
-# ------------------------------------------------------------------------------
-
-# lockfile name
-declare -r LOCKFILE='/tmp/vbht'
-
-# maximum lockfile read retries
-declare -ri LOCKRETRIES=7
-
-# ------------------------------------------------------------------------------
 # -- Log-related constants -----------------------------------------------------
 # ------------------------------------------------------------------------------
 
 # hash for this script's run
 declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
-
-# logfile name
-declare -r LOGFILE='/var/log/vbht/vbht'
-
+# the previous RUNHASH
+declare prevRUNHASH=''
 # error pipe for this script's run (defined in terms of RUNHASH)
 declare -r ERRPIPE="/tmp/${RUNHASH}"
+# logfile name
+declare -r LOGFILE='/var/log/vbht/vbht'
 
 # maximum user settable verbosity
 declare -ri MAX_VERB=6
@@ -465,7 +477,7 @@ declare -ri SEV_STDERR=6 SEV_DEBUG=5 SEV_INFO=4 SEV_WARNING=3 SEV_ERROR=2 SEV_FA
 declare -ri SEV_OTHER=0
 
 # colours and shapes
-declare START_STDERR='' STOP_STDERR=''
+declare START_STDERR=''  STOP_STDERR=''
 declare START_DEBUG=''   STOP_DEBUG=''
 declare START_INFO=''    STOP_INFO=''
 declare START_WARNING='' STOP_WARNING=''
@@ -474,17 +486,26 @@ declare START_FATAL=''   STOP_FATAL=''
 declare START_EMPH=''    STOP_EMPH=''
 # initialise according to STDERRTYPE
 if [[ "${STDERRTYPE}" == 'C' ]]; then
-  START_STDERR="$( tput bold)$(tput setaf 4)"; STOP_STDERR="$( tput sgr0)"
-  START_DEBUG="$(  tput bold)$(tput setaf 6)"; STOP_DEBUG="$(  tput sgr0)"
-  START_INFO="$(   tput bold)$(tput setaf 2)"; STOP_INFO="$(   tput sgr0)"
-  START_WARNING="$(tput bold)$(tput setaf 3)"; STOP_WARNING="$(tput sgr0)"
-  START_ERROR="$(  tput bold)$(tput setaf 1)"; STOP_ERROR="$(  tput sgr0)"
-  START_FATAL="$(  tput bold)$(tput setaf 5)"; STOP_FATAL="$(  tput sgr0)"
+  START_STDERR="$( tput bold)$(tput setaf 4)" ||: ; STOP_STDERR="$( tput sgr0)" ||:
+  START_DEBUG="$(  tput bold)$(tput setaf 6)" ||: ; STOP_DEBUG="$(  tput sgr0)" ||:
+  START_INFO="$(   tput bold)$(tput setaf 2)" ||: ; STOP_INFO="$(   tput sgr0)" ||:
+  START_WARNING="$(tput bold)$(tput setaf 3)" ||: ; STOP_WARNING="$(tput sgr0)" ||:
+  START_ERROR="$(  tput bold)$(tput setaf 1)" ||: ; STOP_ERROR="$(  tput sgr0)" ||:
+  START_FATAL="$(  tput bold)$(tput setaf 5)" ||: ; STOP_FATAL="$(  tput sgr0)" ||:
 fi
 
 if [[ "${STDOUTTYPE}" == 'C' || "${STDOUTTYPE}" == 'M' ]]; then
-  START_EMPH="$(tput bold)"; STOP_EMPH="$(tput sgr0)"
+  START_EMPH="$(tput bold)" ||: ; STOP_EMPH="$(tput sgr0)" ||:
 fi
+
+# ------------------------------------------------------------------------------
+# -- Lock-related constants ----------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# lockfile name
+declare -r LOCKFILE='/tmp/vbht'
+# maximum lockfile read retries
+declare -ri LOCKRETRIES=7
 
 # ------------------------------------------------------------------------------
 # -- Synchronization constants -------------------------------------------------
@@ -511,7 +532,7 @@ declare -r IGNOREWARNINGS='confirmGoingFullscreen,confirmGoingSeamless,confirmIn
 # == Option variables ==========================================================
 # ==============================================================================
 
-#@TODO: defend against malicious variable values (ie. malicious VBHT_STOP_METHOD)
+# @TODO: defend against malicious variable values (ie. malicious VBHT_STOP_METHOD)
 
 # when this variable is non empty we've chanced upon errors
 #  'S'  errors occurred, but be silent about it
@@ -574,8 +595,9 @@ else
   info_machine_readable='N'
 fi
 
-# minimum severity to report to stderr
-declare -i verbosity="${VBHT_VERBOSITY:-2}"
+# minimum severity to report to stderr (ignore errors in case VBHT_VERBOSITY
+# can't parse as integer)
+declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-2} )) 2> /dev/null ||:
 
 
 # ==============================================================================
@@ -588,8 +610,6 @@ declare -i vmUID=0
 declare -l vmUUID=''
 # the ACPI event to be forwarded
 declare -l acpiEvent=''
-# the previous RUNHASH
-declare prevRUNHASH=''
 
 # the PID of the process holding the lock
 declare -i lockingPID=0
@@ -620,30 +640,23 @@ declare -i i=0
 # == Traps and logging =========================================================
 # ==============================================================================
 
-# create the ERRPIPE FIFO
-# NB: this pipe MUST be created HERE! otherwise, the DEBUG trap set up
-#   ahead will try to write to ERRPIPE and make mkfifo fail
-#@TODO: set up permissions on mkfifo with the "-m" parameter
-mkfifo "${ERRPIPE}"
 # launch the errListener
-errListener "${ERRPIPE}" &
-# trap EXIT so that we may remove the FIFO pipe
-trap "rm -f -- '${ERRPIPE}'" EXIT
+errListener &
 
 # DUMMY: needed in order to extract string
 : $"Running \`%s' at \`%s:%s'"
 # trap the DEBUG signal and turn it into a log entry
-trap "if [[ \"\${FUNCNAME:-main}\" != 'log' ]]; then log \"${LOGFILE}\" ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
+trap "if [[ \"\${FUNCNAME:-main}\" != 'log' ]]; then log ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
 
 
 # ==============================================================================
 # == Arguments check ===========================================================
 # ==============================================================================
 
-log "${LOGFILE}" ${SEV_DEBUG} $"VBHT started"
+log ${SEV_DEBUG} $"VBHT started"
 
 # we must have at least one argument
-if (( $# == 0 )); then log "${LOGFILE}" ${SEV_ERROR} $"no arguments provided!"; errors='X'
+if (( $# == 0 )); then log ${SEV_ERROR} $"no arguments provided!"; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
@@ -780,7 +793,7 @@ Written by Mariano Perez Rodriguez.
 Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--help' not being the only argument given :P
-    if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} $"\`--help' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then log ${SEV_WARNING} $"\`--help' is supposed to be the ONLY argument given!"; fi
     exit 0
   fi
 
@@ -797,7 +810,7 @@ Written by Mariano Perez Rodriguez.
 Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 EOM
     # just be obnoxious about `--version' not being the only argument given :P
-    if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} $"\`--version' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then log ${SEV_WARNING} $"\`--version' is supposed to be the ONLY argument given!"; fi
     exit 0
   fi
 
@@ -805,7 +818,7 @@ EOM
   if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
     /usr/bin/env pager /opt/vbht/agplv3
     # just be obnoxious about `--license' not being the only argument given :P
-    if (( $# != 1 )); then log "${LOGFILE}" ${SEV_WARNING} $"\`--license' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then log ${SEV_WARNING} $"\`--license' is supposed to be the ONLY argument given!"; fi
     exit 0
   fi
 
@@ -814,7 +827,7 @@ EOM
     'start')
       action='S'
       # check for too few arguments
-      if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} $"too few arguments!"; errors='X'
+      if (( $# == 1 )); then log ${SEV_ERROR} $"too few arguments!"; errors='X'
       else
         # save the argument
         vmUUID="${2}"
@@ -845,12 +858,12 @@ EOM
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                   # invalid option
-                  *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                  *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
                 esac
               done
             ;;
             # invalid option
-            *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+            *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
           esac
           # shift the processed parameter out
           shift 1
@@ -860,7 +873,7 @@ EOM
     'attach')
       action='A'
       # check for too few arguments
-      if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} $"too few arguments!"; errors='X'
+      if (( $# == 1 )); then log ${SEV_ERROR} $"too few arguments!"; errors='X'
       else
         # get optional arguments
         shift 1
@@ -878,12 +891,12 @@ EOM
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                   # invalid option
-                  *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                  *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
                 esac
               done
             ;;
             # invalid option
-            *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+            *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
           esac
           # shift the processed parameter out
           shift 1
@@ -893,12 +906,12 @@ EOM
     'forward')
       action='F'
       # check for too few arguments
-      if (( $# == 1 )); then log "${LOGFILE}" ${SEV_ERROR} $"too few arguments!"; errors='X'
+      if (( $# == 1 )); then log ${SEV_ERROR} $"too few arguments!"; errors='X'
       else
         # save the argument
         acpiEvent="${2}"
         # yell about too many arguments
-        if (( $# != 2 )); then log "${LOGFILE}" ${SEV_WARNING} $"additional arguments ignored! -- \`%s'" "${*:3}"; fi
+        if (( $# != 2 )); then log ${SEV_WARNING} $"additional arguments ignored! -- \`%s'" "${*:3}"; fi
       fi
     ;;
     'info')
@@ -920,12 +933,12 @@ EOM
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                 # invalid option
-                *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
               esac
             done
           ;;
           # invalid option
-          *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+          *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
         esac
         # shift the processed parameter out
         shift 1
@@ -959,18 +972,18 @@ EOM
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                 # invalid option
-                *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
               esac
             done
           ;;
           # invalid option
-          *) log "${LOGFILE}" ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+          *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
         esac
         # shift the processed parameter out
         shift 1
       done
     ;;
-    *) log "${LOGFILE}" ${SEV_ERROR} $"invalid action! -- \`%s'" "${1}"; errors='X' ;;
+    *) log ${SEV_ERROR} $"invalid action! -- \`%s'" "${1}"; errors='X' ;;
   esac
 fi
 
@@ -978,8 +991,8 @@ fi
 if [[ "${errors}" ]]; then printf $"Try \`%s --help' for more information.\n" "${0##*/}" >&2; exit 1; fi
 
 # fix up verbosity
-if (( verbosity > MAX_VERB )); then verbosity=${MAX_VERB}; fi
-if (( verbosity < 0        )); then verbosity=0          ; fi
+if (( verbosity > MAX_VERB )); then (( verbosity = ${MAX_VERB} )); fi
+if (( verbosity < 0        )); then (( verbosity = 0           )); fi
 
 # prevent accidental modification
 readonly action
@@ -1011,28 +1024,28 @@ if [[ "${action}" == 'S' ]]; then
   # we're going to check for emptiness of "vmUUID")
   temp="${vmUUID}"; vmUUID=$(getUUID ${vmUUID}) ||:
   # fail if not a valid virtual machine specification
-  if ! [[ "${vmUUID}" ]]; then log "${LOGFILE}" ${SEV_ERROR} $"invalid virtual machine specification! -- \`%s'" "${temp}"; errors='X'
+  if ! [[ "${vmUUID}" ]]; then log ${SEV_ERROR} $"invalid virtual machine specification! -- \`%s'" "${temp}"; errors='X'
   else
     # try to get lock (mask errors, we're going to check the output)
-    lockingPID=$(getLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}") ||:
+    lockingPID=$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}") ||:
     # if there's another process using the lock, fail
-    if (( lockingPID )); then log "${LOGFILE}" ${SEV_ERROR} $"another process is holding the lock with PID %s!" "${lockingPID}"; errors='X'
+    if (( lockingPID )); then log ${SEV_ERROR} $"another process is holding the lock with PID %s!" "${lockingPID}"; errors='X'
     else
       # save VirtualBox(R)'s ignored warnings
       warns=$(getWarns)
       # try to set ignored warnings, and fail if we couldn't
       if setWarns "${IGNOREWARNINGS}"; then
-        log "${LOGFILE}" ${SEV_ERROR} $"setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!" $?; errors='X'
+        log ${SEV_ERROR} $"setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!" $?; errors='X'
         # if warnings could not be disabled, disable keyboard attachment
         attach_keyboard='E'
         # tell the lockfile about it
-        addToLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+        addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
       fi
 
       # if we have to launch the print listener, do that now
       if [[ "${launch_print_listener}" == 'Y' ]]; then
         # launch the print listener in background
-        printListener "${PRINTDIR}" &
+        printListener &
       fi
 
       # if we're going to attach keyboards disable input devices now
@@ -1042,10 +1055,10 @@ if [[ "${action}" == 'S' ]]; then
         ret=0; indevs=$(disableKbdsMice) || ret=$?
         if (( ret )); then
           # if disabling failed, yell
-          log "${LOGFILE}" ${SEV_ERROR} $"disabling input devices (%s) failed, keyboards will NOT be attached!" "${indevs}"; errors='X'
+          log ${SEV_ERROR} $"disabling input devices (%s) failed, keyboards will NOT be attached!" "${indevs}"; errors='X'
           attach_keyboard='E'
           # tell the lockfile about it
-          addToLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+          addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
         fi
       fi
 
@@ -1061,30 +1074,30 @@ if [[ "${action}" == 'S' ]]; then
       eval -- "${line}" & vbPID=$!
 
       # wait for the VM to become available, recover if it timed out
-      if ! waitRunning "${vmUUID}" "${KBDATTACHINIDWELL}" "${KBDATTACHINTDWELL}" "${KBDATTACHMAXTRIES}"; then
-        log "${LOGFILE}" ${SEV_WARNING} $"could not wait for virtual machine to start up, keyboard attachment will NOT be available!"; errors='X'
+      if ! waitRunning "${vmUUID}"; then
+        log ${SEV_WARNING} $"could not wait for virtual machine to start up, keyboard attachment will NOT be available!"; errors='X'
         # disable keyboard attachment
         attach_keyboard='E'
         # tell the lockfile about it
-        addToLock "${LOCKFILE}" "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+        addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
       fi
 
       # machine is in "running" state, attach keyboards if need be
       if [[ "${attach_keyboard}" == 'Y' ]]; then
         # try to attach every keyboard, and, if there were errors, just yell, not much we can do now
-        if ! attachKbds "${vmUUID}"; then log "${LOGFILE}" ${SEV_ERROR} $"keyboard attachment failed for at least one device!"; errors='X'; fi
+        if ! attachKbds "${vmUUID}"; then log ${SEV_ERROR} $"keyboard attachment failed for at least one device!"; errors='X'; fi
       fi
 
       # if there are devpaths to attach, do that now
       while (( $# )); do
         # get an address from the devpath (mask errors)
-        address=$(devpath2address "${1}") ||:
+        address="$(devpath2address "${1}")" ||:
         # show error if not a valid DEVPATH
-        if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} $"invalid devpath! -- \`%s'" "${1}"; errors='X'
+        if ! [[ "${address}" ]]; then log ${SEV_ERROR} $"invalid devpath! -- \`%s'" "${1}"; errors='X'
         else
           # try to attach device line and report non-zero status
           if ! vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> "${ERRPIPE}"; then
-            log "${LOGFILE}" ${SEV_WARNING} $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X'
+            log ${SEV_WARNING} $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X'
           fi
         fi
         # shift the processed parameter out
@@ -1096,8 +1109,8 @@ if [[ "${action}" == 'S' ]]; then
         # try to re-enable input devices
         if ! enableKbdsMice "${indevs}" > "${ERRPIPE}"; then
           # if re-enabling failed, yell and try to re-enable all of them
-          log "${LOGFILE}" ${SEV_ERROR} $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
-          if ! enableKbdsMice > "${ERRPIPE}"; then log "${LOGFILE}" ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
+          log ${SEV_ERROR} $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
+          if ! enableKbdsMice > "${ERRPIPE}"; then log ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
         fi
       fi
 
@@ -1109,7 +1122,7 @@ if [[ "${action}" == 'S' ]]; then
 
       # try to restore ignored warnings, if the command failed, at least
       # let the user know which were the original warnings
-      if ! setWarns "${warns}"; then log "${LOGFILE}" ${SEV_WARNING} $"restoring ignored warnings returned non-zero (%d) status! -- \`%s'" $? "${warns}"; errors='X'; fi
+      if ! setWarns "${warns}"; then log ${SEV_WARNING} $"restoring ignored warnings returned non-zero (%d) status! -- \`%s'" $? "${warns}"; errors='X'; fi
 
       # free lock file
       rm -f -- "${LOCKFILE}"
@@ -1126,14 +1139,14 @@ elif [[ "${action}" == 'A' ]]; then
   #
 
   # try to read the lock file's line
-  if ! readLock "${LOCKFILE}" _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
-    log "${LOGFILE}" ${SEV_ERROR} $"no capturing virtual machine running!"; errors='X'
+  if ! readLock _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
+    log ${SEV_ERROR} $"no capturing virtual machine running!"; errors='X'
   else
     # if the machine doesn't accept attachments, fail
-    if [[ "${auto_attach}" == 'N' || "${auto_attach}" == 'E' ]]; then log "${LOGFILE}" ${SEV_ERROR} $"the capturing virtual machine does not accept attachments!"; errors='X'
+    if [[ "${auto_attach}" != 'Y' ]]; then log ${SEV_ERROR} $"the capturing virtual machine does not accept attachments!"; errors='X'
     else
       # check if the user may attach to the capturing virtual machine
-      if (( ( UID != vmUID ) && UID )); then log "${LOGFILE}" ${SEV_ERROR} $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+      if (( ( UID != vmUID ) && UID )); then log ${SEV_ERROR} $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
       else
         # start building "attach" line
         line="vboxmanage controlvm '${vmUUID}' usbattach"
@@ -1143,13 +1156,13 @@ elif [[ "${action}" == 'A' ]]; then
         #process each DEVPATH in turn
         while (( $# )); do
           # get an address from the DEVPATH (mask errors)
-          address=$(devpath2address "${1}") ||:
+          address="$(devpath2address "${1}")" ||:
           # show error if not a valid DEVPATH
-          if ! [[ "${address}" ]]; then log "${LOGFILE}" ${SEV_ERROR} $"invalid devpath! -- \`%s'" "${1}"; errors='X'
+          if ! [[ "${address}" ]]; then log ${SEV_ERROR} $"invalid devpath! -- \`%s'" "${1}"; errors='X'
           else
             # evaluate attach line and report non-zero status
             if ! eval -- "${line} '${address}' 2> ${ERRPIPE}"; then
-              log "${LOGFILE}" ${SEV_WARNING} $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X';
+              log ${SEV_WARNING} $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X';
             fi
           fi
           # shift the processed parameter out
@@ -1169,9 +1182,9 @@ elif [[ "${action}" == 'F' ]]; then
   #
 
   # try to read the lock file's line
-  if ! readLock "${LOCKFILE}" _ vmUID vmUUID prevRUNHASH _ acpi_forward _ _ _; then errors='S'; else
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ acpi_forward _ _ _; then errors='S'; else
     # if the machine doesn't accept ACPI forwarding, fail
-    if [[ "${acpi_forward}" == 'N' || "${acpi_forward}" == 'E' ]]; then errors='S'; else
+    if [[ "${acpi_forward}" != 'Y' ]]; then errors='S'; else
       # check if the user may forward ACPI events to the capturing virtual machine
       if (( ( UID != vmUID ) && UID )); then errors='S'; else
         # start building "forward" line
@@ -1204,7 +1217,7 @@ elif [[ "${action}" == 'I' ]]; then
   #
 
   # try to read the lock file's line
-  if ! readLock "${LOCKFILE}" vmPID vmUID vmUUID prevRUNHASH auto_attach attach_keyboard acpi_forward launch_print_listener use_new_X; then
+  if ! readLock vmPID vmUID vmUUID prevRUNHASH auto_attach attach_keyboard acpi_forward launch_print_listener use_new_X; then
     if [[ "${info_machine_readable}" == 'Y' ]]; then echo ''; else echo $"No vbht-managed virtual machine running!"; fi
   else
     if [[ "${info_machine_readable}" == 'Y' ]]; then
@@ -1234,28 +1247,30 @@ elif [[ "${action}" == 'X' ]]; then
   #
 
   # try to read the lock file's line
-  if ! readLock "${LOCKFILE}" _ vmUID vmUUID prevRUNHASH _ _ _ _ _; then log "${LOGFILE}" ${SEV_ERROR} $"no capturing virtual machine running!"; errors='X'
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ _ _ _; then log ${SEV_ERROR} $"no capturing virtual machine running!"; errors='X'
   else
     # check if the user may stop the capturing virtual machine
-    if (( ( UID != vmUID ) && UID )); then log "${LOGFILE}" ${SEV_ERROR} $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+    if (( ( UID != vmUID ) && UID )); then log ${SEV_ERROR} $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
     else
       # start building "stop" line
       line="vboxmanage controlvm '${vmUUID}'"
       # append stoppage type
-      if   [[ "${stop_method}" == 'A' ]]; then line="${line} acpipowerbutton"
-      elif [[ "${stop_method}" == 'O' ]]; then line="${line} poweroff"
-      elif [[ "${stop_method}" == 'R' ]]; then line="${line} reset"
-      elif [[ "${stop_method}" == 'S' ]]; then line="${line} savestate"
-      elif [[ "${stop_method}" == 'L' ]]; then line="${line} acpisleepbutton"
-      else log "${LOGFILE}" ${SEV_ERROR} $"invalid stoppage type! -- \`${stop_method}'"; errors='X'
-      fi
+      case "${stop_method}" in
+        'A') line="${line} acpipowerbutton" ;;
+        'O') line="${line} poweroff"        ;;
+        'R') line="${line} reset"           ;;
+        'S') line="${line} savestate"       ;;
+        'L') line="${line} acpisleepbutton" ;;
+        #
+        *) log ${SEV_ERROR} $"invalid stoppage type! -- \`%s'" "${stop_method}"; errors='X' ;;
+      esac
       # prepend "sudo" prefix
       if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
       # append error redirection
       line="${line} 2> ${ERRPIPE}"
 
       # evaluate stop line and report non-zero status
-      if ! eval -- "${line}"; then log "${LOGFILE}" ${SEV_WARNING} $"stoppage returned non-zero (%d) status!" $? >&2; fi
+      if ! eval -- "${line}"; then log ${SEV_WARNING} $"stoppage returned non-zero (%d) status!" $? >&2; fi
     fi
   fi
 fi
