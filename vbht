@@ -37,6 +37,7 @@ set -T          # propagate DEBUG and RETURN traps
 # set up domain
 TEXTDOMAIN=vbht
 
+
 # ==============================================================================
 # == Functions =================================================================
 # ==============================================================================
@@ -333,7 +334,7 @@ log() {
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-$RUNHASH}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "${logfile}"
+  echo "[${prevRUNHASH:-${RUNHASH}}-$(date -u '+%0Y:%0m:%0d:%0H:%0M:%0S:%0N')-${sev_name}] ${std_log}" >> "${logfile}"
 }
 
 # Listen to stderr pipe and log
@@ -422,41 +423,16 @@ printListener() {
 # -- System-related constants --------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# stderr type
+# stdout/stderr type
 #  'C'  colour-capable tty (at least 8 colors available)
 #  'M'  monochrome tty (or less than 8 colours)
 #  'O'  other type of stderr (eg. pipe)
-declare -u STDERRTYPE=''
-# determine stderr type
-if [[ -t 2 ]]; then
-  if (( $(tput colors 2> /dev/null) >= 8 )); then
-    STDERRTYPE='C'
-  else
-    STDERRTYPE='M'
-  fi
-else
-  STDERRTYPE='O'
-fi
+declare -u STDOUTTYPE='' STDERRTYPE=''
+# determine stdout/stderr type
+if [[ -t 1 ]]; then if (( $(tput colors 2> /dev/null) >= 8 )); then STDOUTTYPE='C'; else STDOUTTYPE='M'; fi; else STDOUTTYPE='O'; fi
+if [[ -t 2 ]]; then if (( $(tput colors 2> /dev/null) >= 8 )); then STDERRTYPE='C'; else STDERRTYPE='M'; fi; else STDERRTYPE='O'; fi
 # prevent accidental modification
-readonly STDERRTYPE
-
-# stdout type
-#  'C'  colour-capable tty (at least 8 colors available)
-#  'M'  monochrome tty (or less than 8 colours)
-#  'O'  other type of stdout (eg. pipe)
-declare -u STDOUTTYPE=''
-# determine stderr type
-if [[ -t 1 ]]; then
-  if (( $(tput colors 2> /dev/null) >= 8 )); then
-    STDOUTTYPE='C'
-  else
-    STDOUTTYPE='M'
-  fi
-else
-  STDOUTTYPE='O'
-fi
-# prevent accidental modification
-readonly STDOUTTYPE
+readonly STDERRTYPE STDOUTTYPE
 
 # ------------------------------------------------------------------------------
 # -- Lock-related constants ----------------------------------------------------
@@ -472,28 +448,24 @@ declare -ri LOCKRETRIES=7
 # -- Log-related constants -----------------------------------------------------
 # ------------------------------------------------------------------------------
 
+# hash for this script's run
+declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
+
 # logfile name
 declare -r LOGFILE='/var/log/vbht/vbht'
 
-# hash for this script's run
-declare -r RUNHASH=$(cat /dev/urandom | tr -cd '[:alnum:]' | head -c 64)
 # error pipe for this script's run (defined in terms of RUNHASH)
 declare -r ERRPIPE="/tmp/${RUNHASH}"
 
 # maximum user settable verbosity
 declare -ri MAX_VERB=6
 # severities/verbosities
-declare -ri SEV_STDERR=6
-declare -ri SEV_DEBUG=5
-declare -ri SEV_INFO=4
-declare -ri SEV_WARNING=3
-declare -ri SEV_ERROR=2
-declare -ri SEV_FATAL=1
+declare -ri SEV_STDERR=6 SEV_DEBUG=5 SEV_INFO=4 SEV_WARNING=3 SEV_ERROR=2 SEV_FATAL=1
 # "other" is used to signify no pre-format is to be applied
 declare -ri SEV_OTHER=0
 
 # colours and shapes
-declare START_STDERR=''  STOP_STDERR=''
+declare START_STDERR='' STOP_STDERR=''
 declare START_DEBUG=''   STOP_DEBUG=''
 declare START_INFO=''    STOP_INFO=''
 declare START_WARNING='' STOP_WARNING=''
@@ -518,14 +490,9 @@ fi
 # -- Synchronization constants -------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# initial dwell time used to attach keyboards
-declare -ri KBDATTACHINIDWELL=5
-
-# maximum number of tries for attaching keyboards
-declare -ri KBDATTACHMAXTRIES=20
-
-# dwell time between keyboard attachment tries
-declare -ri KBDATTACHINTDWELL=2
+# initial dwell time used to attach keyboards, maximum number of tries for
+# attaching keyboards, dwell time between keyboard attachment tries
+declare -ri KBDATTACHINIDWELL=5 KBDATTACHMAXTRIES=20 KBDATTACHINTDWELL=2
 
 # ------------------------------------------------------------------------------
 # -- Misc constants ------------------------------------------------------------
@@ -533,7 +500,6 @@ declare -ri KBDATTACHINTDWELL=2
 
 # the actual home directory (valid for root under udev too)
 declare -r HOME=${HOME:-/root}
-
 # print directory name
 declare -r PRINTDIR="${HOME}/.vbht-print"
 
@@ -623,7 +589,7 @@ declare -l vmUUID=''
 # the ACPI event to be forwarded
 declare -l acpiEvent=''
 # the previous RUNHASH
-prevRUNHASH=''
+declare prevRUNHASH=''
 
 # the PID of the process holding the lock
 declare -i lockingPID=0
@@ -633,14 +599,14 @@ declare -i vbPID=0
 declare -i vmPID=0
 
 # the address of the (to be) attached USB device
-address=''
+declare address=''
 # previous VirtualBox(R) warnings
-warns=''
+declare warns=''
 # disabled input devices list
-indevs=''
+declare indevs=''
 
 # used to construct evaluatable lines
-line=''
+declare line=''
 # used to hold return values in general
 declare -i ret=0
 
@@ -662,8 +628,10 @@ mkfifo "${ERRPIPE}"
 # launch the errListener
 errListener "${ERRPIPE}" &
 # trap EXIT so that we may remove the FIFO pipe
-trap "rm -f -- ${ERRPIPE}" EXIT
+trap "rm -f -- '${ERRPIPE}'" EXIT
 
+# DUMMY: needed in order to extract string
+: $"Running \`%s' at \`%s:%s'"
 # trap the DEBUG signal and turn it into a log entry
 trap "if [[ \"\${FUNCNAME:-main}\" != 'log' ]]; then log \"${LOGFILE}\" ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
 
