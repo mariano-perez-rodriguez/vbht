@@ -109,57 +109,57 @@ if (( $# == 0 )); then echo $"Error: no arguments provided!" >&2; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
-    cat <<'EOM'
-Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]
-           COMMAND [ARGUMENT...]
-   or: openx { -h | --help }
-   or: openx { -V | --version }
-   or: openx { -L | --license }
-
-(securely) Execute COMMAND on a new instance of the X server, switching to
-it and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.
-
-      -d, --dump   dump the display number of the newly created X instance
-                   before running COMMAND, eg. `:1234567890'
-      -s, --sim    simulate but don't run: output the line to be executed
-      -n, --noptr  hide the mouse pointer for the newly created X server root
-
-      -h, --help     display this help and exit
-      -V, --version  output version information and exit
-      -L, --license  display the GNU Affero General Public License and exit
-
-Examples (`>' stands for the shell prompt, `1000' for the current UID):
-
-    > sudo openx -s xclock -digital -utime
-    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \
-      -- :1234567890
-
-    > sudo openx -d xclock -digital -utime
-    :1234567890
-
-Exit status:
-   0  if OK,
-   1  if syntax error,
-   2  if user identity error.
-
-
-NOTE: this script has a will of its own, bear in mind that
-  1. it MUST BE RUN UNDER SUDO, moreover, it MUST SUDO TO ROOT, it will
-     refuse to work otherwise,
-  2. root (ie. the user with UID == 0) may NOT run this script, not even
-     by sudo-ing (ie. `sudo openx whatever' will NOT work for root),
-  3. sudo-chaining (ie. `sudo sudo openx whatever') is NOT allowed,
-  4. no `--' tokens are allowed when they don't lie adjacent to
-     something other than a space-class character (the chaps at X can
-     get REALLY confused otherwise).
-
-openx can't hear your cries, don't fight it: these meassures were set
-in place in order to keep you from shooting yourself on the foot.
-
-
-Written by Mariano Perez Rodriguez.
-Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
-EOM
+    printf $"\
+Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]\n\
+           COMMAND [ARGUMENT...]\n\
+   or: openx { -h | --help }\n\
+   or: openx { -V | --version }\n\
+   or: openx { -L | --license }\n\
+\n\
+(securely) Execute COMMAND on a new instance of the X server, switching to\n\
+it and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.\n\
+\n\
+      -d, --dump   dump the display number of the newly created X instance\n\
+                   before running COMMAND, eg. \`:1234567890'\n\
+      -s, --sim    simulate but don't run: output the line to be executed\n\
+      -n, --noptr  hide the mouse pointer for the newly created X server root\n\
+\n\
+      -h, --help     display this help and exit\n\
+      -V, --version  output version information and exit\n\
+      -L, --license  display the GNU Affero General Public License and exit\n\
+\n\
+Examples (\`>' stands for the shell prompt, \`1000' for the current UID):\n\
+\n\
+    > sudo openx -s xclock -digital -utime\n\
+    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\ \n\
+      -- :1234567890\n\
+\n\
+    > sudo openx -d xclock -digital -utime\n\
+    :1234567890\n\
+\n\
+Exit status:\n\
+   0  if OK,\n\
+   1  if syntax error,\n\
+   2  if user identity error.\n\
+\n\
+\n\
+NOTE: this script has a will of its own, bear in mind that\n\
+  1. it MUST BE RUN UNDER SUDO, moreover, it MUST SUDO TO ROOT, it will\n\
+     refuse to work otherwise,\n\
+  2. root (ie. the user with UID == 0) may NOT run this script, not even\n\
+     by sudo-ing (ie. \`sudo openx whatever' will NOT work for root),\n\
+  3. sudo-chaining (ie. \`sudo sudo openx whatever') is NOT allowed,\n\
+  4. no \`--' tokens are allowed when they don't lie adjacent to\n\
+     something other than a space-class character (the chaps at X can\n\
+     get REALLY confused otherwise).\n\
+\n\
+openx can't hear your cries, don't fight it: these meassures were set\n\
+in place in order to keep you from shooting yourself on the foot.\n\
+\n\
+\n\
+Written by Mariano Perez Rodriguez.\n\
+Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n\
+"
     # just be obnoxious about `--help' not being the only argument given :P
      if (( $# != 1 )); then echo $"Warning: \`--help' is supposed to be the ONLY argument given!" >&2; fi
     exit 0
@@ -167,16 +167,16 @@ EOM
 
   # check for `--version' argument
   if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
-    cat <<'EOM'
-openx 0.4
-Copyright (C) 2012 Mariano Perez Rodriguez
-License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
-
-Written by Mariano Perez Rodriguez.
-Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
-EOM
+    printf $"\
+openx 0.4\n\
+Copyright (C) 2012 Mariano Perez Rodriguez\n\
+License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n\
+\n\
+Written by Mariano Perez Rodriguez.\n\
+Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n\
+"
     # just be obnoxious about `--version' not being the only argument given :P
     if (( $# != 1 )); then echo $"Warning: \`--version' is supposed to be the ONLY argument given!" >&2; fi
     exit 0
