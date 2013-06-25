@@ -357,7 +357,7 @@ disableKbdsMice() {
   if ! (( $# )); then
     # get the list slave keyboard and pointer XIDs, sort them, and
     # concatenate them into a comma-terminated list of XIDs
-    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tr $'\n' ',')"
+    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -ve 'XTEST' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tr $'\n' ',')"
     xids="${xids%,}"
   else
     # otherwise, just set xids
@@ -385,7 +385,7 @@ enableKbdsMice() {
   if ! (( $# )); then
     # get the list slave keyboard and pointer XIDs, sort them, and
     # concatenate them into a comma-terminated list of XIDs
-    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tr $'\n' ',')"
+    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -ve 'XTEST' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tr $'\n' ',')"
     xids="${xids%,}"
   else
     # otherwise, just set xids
