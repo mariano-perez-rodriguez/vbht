@@ -2,8 +2,16 @@
 msgid "Error: no arguments provided!"
 msgstr ""
 
+#: openx:112
+msgid "Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]\\n           COMMAND [ARGUMENT...]\\n   or: openx { -h | --help }\\n   or: openx { -V | --version }\\n   or: openx { -L | --license }\\n\\n(securely) Execute COMMAND on a new instance of the X server, switching to\\nit and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.\\n\\n      -d, --dump   dump the display number of the newly created X instance\\n                   before running COMMAND, eg. \\`:1234567890'\\n      -s, --sim    simulate but don't run: output the line to be executed\\n      -n, --noptr  hide the mouse pointer for the newly created X server root\\n\\n      -h, --help     display this help and exit\\n      -V, --version  output version information and exit\\n      -L, --license  display the GNU Affero General Public License and exit\\n\\nExamples (\\`>' stands for the shell prompt, \\`1000' for the current UID):\\n\\n    > sudo openx -s xclock -digital -utime\\n    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\\\ \\n      -- :1234567890\\n\\n    > sudo openx -d xclock -digital -utime\\n    :1234567890\\n\\nExit status:\\n   0  if OK,\\n   1  if syntax error,\\n   2  if user identity error.\\n\\n\\nNOTE: this script has a will of its own, bear in mind that\\n  1. it MUST BE RUN UNDER SUDO, moreover, it MUST SUDO TO ROOT, it will\\n     refuse to work otherwise,\\n  2. root (ie. the user with UID == 0) may NOT run this script, not even\\n     by sudo-ing (ie. \\`sudo openx whatever' will NOT work for root),\\n  3. sudo-chaining (ie. \\`sudo sudo openx whatever') is NOT allowed,\\n  4. no \\`--' tokens are allowed when they don't lie adjacent to\\n     something other than a space-class character (the chaps at X can\\n     get REALLY confused otherwise).\\n\\nopenx can't hear your cries, don't fight it: these meassures were set\\nin place in order to keep you from shooting yourself on the foot.\\n\\n\\nWritten by Mariano Perez Rodriguez.\\nReport openx bugs to: <mariano.perez.rodriguez@gmail.com>\\n"
+msgstr ""
+
 #: openx:164
 msgid "Warning: \\`--help' is supposed to be the ONLY argument given!"
+msgstr ""
+
+#: openx:170
+msgid "openx 0.4\\nCopyright (C) 2012 Mariano Perez Rodriguez\\nLicense AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.\\nThis is free software: you are free to change and redistribute it.\\nThere is NO WARRANTY, to the extent permitted by law.\\n\\nWritten by Mariano Perez Rodriguez.\\nReport openx bugs to: <mariano.perez.rodriguez@gmail.com>\\n"
 msgstr ""
 
 #: openx:181
