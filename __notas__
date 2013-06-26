@@ -42,6 +42,8 @@ TODO:
 
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
+- hacer que los scripts se verifiquen a si mismos con md5 (u otro hash) antes de empezar (esta etapa NO loguea NADA, si falla, el script ni corre).
+
 - ver si el artilugio de leer con "<>" se puede usar para simplificar el printListener()
 
 - para recargar reglas de udev (SIN inotify, con lo cual funciona con links simbolicos... asumo)
