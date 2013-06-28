@@ -40,6 +40,9 @@ DONE:
 
 TODO:
 
+- OJO con los newlines en el pipe de STDERR!!! esto puede complicarnos el parseo del log mas tarde.
+  verificar que cuando venga un newline en STDERR se lo considere una linea nueva completa (que lleve su propio encabezado).
+
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
 - hacer que los scripts se verifiquen a si mismos con md5 (u otro hash) antes de empezar (esta etapa NO loguea NADA, si falla, el script ni corre).
