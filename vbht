@@ -336,7 +336,7 @@ addToLock() {
 # Depends: LOCKFILE, ERRPIPE
 readLock() {
   # try to read the given variables
-  IFS=':' read -r ${@:2} < <(tail -n1 -- "${LOCKFILE}" 2> "${ERRPIPE}" ||:)
+  IFS=':' read -r ${@} < <(tail -n1 -- "${LOCKFILE}" 2> "${ERRPIPE}" ||:)
 }
 
 # ------------------------------------------------------------------------------
