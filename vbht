@@ -1231,7 +1231,7 @@ if [[ "${action}" == 'S' ]]; then
       # save VirtualBox(R)'s ignored warnings
       warns="$(getWarns)"
       # try to set ignored warnings, and fail if we couldn't
-      if setWarns "${IGNOREWARNINGS}"; then
+      if ! setWarns "${IGNOREWARNINGS}"; then
         log ${SEV_ERROR} $"setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!" $?; errors='X'
         # if warnings could not be disabled, disable keyboard attachment
         attach_keyboard='E'
