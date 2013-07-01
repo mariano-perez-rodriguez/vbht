@@ -765,7 +765,7 @@ errListener &
 # DUMMY: needed in order to extract string
 : $"Running \`%s' at \`%s:%s'"
 # trap the DEBUG signal and turn it into a log entry
-trap "if [[ \"\${FUNCNAME:-main}\" != 'log' ]]; then log ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
+trap "if [[ \"\${FUNCNAME:-main}\" != 'log' && \"\${FUNCNAME:-main}\" != 'errListener' ]]; then log ${SEV_DEBUG} \$\"Running \\\`%s\' at \\\`%s:%s\'\" \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"; fi" DEBUG
 
 # verify needed commands
 verifyNeededCommands
