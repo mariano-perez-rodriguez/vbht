@@ -569,7 +569,8 @@ declare -ri MAX_VERB=6
 # severities/verbosities
 declare -ri SEV_STDERR=6 SEV_DEBUG=5 SEV_INFO=4 SEV_WARNING=3 SEV_ERROR=2 SEV_FATAL=1
 # "other" is used to signify no pre-format is to be applied
-declare -ri SEV_OTHER=0
+declare -ri SEV_OTHER_VERB=0  # show to stderr
+declare -ri SEV_OTHER_SLNT=7  # hide from stderr
 
 # colours and shapes
 declare START_STDERR=''  STOP_STDERR=''
@@ -1270,7 +1271,7 @@ if [[ "${action}" == 'S' ]]; then
       # in the background) and get its PID
       eval -- "${line}" & vbPID=$!
       # let the log know about this
-      log ${SEV_OTHER} "STARTED ${vmUUID}"
+      log ${SEV_OTHER_SLNT} "STARTED ${vmUUID}"
 
       # wait for the VM to become available, recover if it timed out
       if ! waitRunning "${vmUUID}"; then
