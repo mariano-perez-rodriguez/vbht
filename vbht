@@ -562,7 +562,7 @@ declare -r ERRPIPE="/tmp/${RUNHASH}"
 # logfile directory
 declare -r LOGDIR='/var/log/vbht'
 # logfile name
-declare -r LOGFILE='${LOGDIR}/vbht'
+declare -r LOGFILE="${LOGDIR}/vbht"
 
 # maximum user settable verbosity
 declare -ri MAX_VERB=6
