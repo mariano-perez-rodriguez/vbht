@@ -107,18 +107,18 @@ verifyNeededCommands() {
   for comm in "${NEEDEDCOMMANDS[@]}"; do
     # try to hash it (throw away output and errors)
     if ! hash "$comm" 1> /dev/null 2> /dev/null; then
-      log ${SEV_FATAL} $"Command not found in path: \`%s'" "$comm"
+      printf $"Command not found in path: \`%s'" "$comm"
       (( missing++ ))
     fi
   done
   # show additional error message
   if (( missing )); then
     if (( missing == 1 )); then
-      log ${SEV_INFO} $"At least one essential command was not found in path!"
+      printf $"At least one essential command was not found in path!"
     elif (( missing > 1 )); then
-      log ${SEV_INFO} $"At least %d essential commands were not found in path!" "$missing"
+      printf $"At least %d essential commands were not found in path!" "$missing"
     fi
-    log ${SEV_INFO} $"Aborting!"
+    printf $"Aborting!"
     exit 1
   fi
 }
