@@ -1382,7 +1382,7 @@ elif [[ "${action}" == 'F' ]]; then
   #
 
   # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH _ acpi_forward _ _ _; then errors='S'; else
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forward _ _; then errors='S'; else
     # if the machine doesn't accept ACPI forwarding, fail
     if [[ "${acpi_forward}" != 'Y' ]]; then errors='S'; else
       # check if the user may forward ACPI events to the capturing virtual machine
