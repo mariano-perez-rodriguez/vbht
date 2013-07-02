@@ -44,53 +44,15 @@ TEXTDOMAIN=vbht
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# -- Stage 0 commands ----------------------------------------------------------
+# -- Needed commands -----------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# the commands needed to get to (and successfully execute) the traps below
+# the needed commands
 #
 # NB: `tput' is not considered "needed" in the strictest sense: its only cosmetical
-declare -r STAGEZEROCOMMANDS=('head' 'mkfifo' 'rm' 'tr')
+declare -r NEEDEDCOMMANDS=('cat' 'cut' 'find' 'grep' 'head' 'inotifywait' 'lpr' 'mkdir' 'mkfifo' 'readlink' 'rm' 'sleep' 'sort' 'sudo' 'tail' 'tee' 'tr' 'xargs' 'xinput' 'vboxmanage' 'VirtualBox')
 
 # ------------------------------------------------------------------------------
-# -- Normal commands -----------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-# the rest of the needed commands
-declare -r NEEDEDCOMMANDS=('cat' 'cut' 'find' 'grep' 'head' 'inotifywait' 'lpr' 'mkdir' 'readlink' 'sleep' 'sort' 'sudo' 'tail' 'tee' 'xargs' 'xinput' 'vboxmanage' 'VirtualBox')
-
-# ------------------------------------------------------------------------------
-
-# Verify the stage 0 commands exist
-#
-# Usage: verifyStageZero
-# Returns: 0 if successful, exits with error code 1 if not
-# Outputs: error messages to stderr
-# Depends: STAGEZEROCOMMANDS
-#
-# taken from <http://wiki.bash-hackers.org/scripting/style#behaviour_and_robustness>
-verifyStageZero() {
-  local -i missing=0
-  local comm=''
-  # loop through each command
-  for comm in "${STAGEZEROCOMMANDS[@]}"; do
-    # try to hash it (throw away output and errors)
-    if ! hash "$comm" 1> /dev/null 2> /dev/null; then
-      printf '-- '$"Command not found in path: \`%s'"$'\n' "$comm" >&2
-      (( missing++ ))
-    fi
-  done
-  # show additional error message
-  if (( missing )); then
-    if (( missing == 1 )); then
-      printf $"At least one essential command was not found in path!"$'\n' >&2
-    elif (( missing > 1 )); then
-      printf $"At least %d essential commands were not found in path!"$'\n' "$missing" >&2
-    fi
-    printf $"Aborting!"$'\n' >&2
-    exit 1
-  fi
-}
 
 # Verify the needed commands exist
 #
@@ -125,8 +87,8 @@ verifyNeededCommands() {
 
 # ------------------------------------------------------------------------------
 
-# actually verify stage 0 commands
-verifyStageZero
+# verify needed commands
+verifyNeededCommands
 
 
 # ==============================================================================
@@ -795,9 +757,6 @@ errListener &
 : $"Running \`%s' at \`%s:%s'"
 # trap the DEBUG signal and turn it into a log entry
 trap "debugTrap \"\${BASH_COMMAND}\" \"\${FUNCNAME}\" \"\${LINENO}\"" DEBUG
-
-# verify needed commands
-verifyNeededCommands
 
 # logging starts here
 declare -ru DO_TRAP_LOGGING='Y'
