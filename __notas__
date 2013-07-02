@@ -56,3 +56,11 @@ TODO:
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
 - OPCIONAL: hacer un printf como la gente (ie. que se banque "tags" como '%s:key' y que se le pase una array asociativa que reemplaza segun "key")
+
+  s='hola :k1 lalala :k2lolo :k1 chau'
+  declare -A arr; arr['k1']='K1'; arr['k2']='K2'
+  t=$s; for k in ${!arr[@]}; do t=${t//:$k/${arr[$k]}}; done; t=${t//:_/:}; echo ">>>$t<<<"
+
+  >>>hola K1 lalala K2lolo K1 chau<<<
+
+  esto hace que las "tags" del estilo ":<nombre>" se reemplacen por el valor asociado a la clave "<nombre>" en el array dado; la ultima regla (que reemplaza ":_" por ":") esta para permitir que en el texto de salida aparezca algo de la forma ":<nombre>" sin que sea reemplazado.
