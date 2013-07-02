@@ -367,24 +367,35 @@ enableKbdsMice() {
 
 # Execute a DEBUG trap
 #
-# Usage debugTrap BASH_COMMAND FUNCNAME LINENO
+# Usage: debugTrap BASH_COMMAND FUNCNAME LINENO
 # Returns: 0, always
 # Outputs: nothing
 # Depends: DO_TRAP_LOGGING, log()
 debugTrap() {
-  if [[ "${DO_TRAP_LOGGING:-N}" != 'N' && "${2:-main}" != 'log' && "${2:-main}" != 'errListener' ]]; then
+  if [[ "${DO_TRAP_LOGGING:-N}" != 'N' && "${2}" != 'log' && "${2}" != 'errListener' && "${2}" != 'exitTrap' ]]; then
     log ${SEV_DEBUG} $"Running \`%s' at \`%s:%s'" "${1}" "${2:-main}" "${3}"
   fi
 }
 
+# Execute a EXIT (and ERR) trap
+#
+# Usage: exitTrap
+# Returns: 0, always
+# Outputs: nothing
+# Depends: PNPID, PLPID, ELPID, PRNPIPE, ERRPIPE
 exitTrap() {
   # kill printNotifier
+  if [[ ${PNPID:-} ]]; then kill "${PNPID}" ||: ; fi
   # kill printlistener
+  if [[ ${PLPID:-} ]]; then kill "${PLPID}" ||: ; fi
   # kill errlistener
+  if [[ ${ELPID:-} ]]; then kill "${ELPID}" ||: ; fi
   # remove lock file (if we launched a VM)
+
   # remove print pipe
+  rm -f -- "${PRNPIPE}"
   # remove error pipe
-  :
+  rm -f -- "${ERRPIPE}"
 }
 
 # ------------------------------------------------------------------------------
@@ -441,12 +452,6 @@ log() {
 # Outputs: nothing
 # Depends: log(), ERRPIPE, SEV_STDERR, LOGFILE
 errListener() {
-  # create the ERRPIPE FIFO
-  # @TODO: set up permissions on mkfifo with the "-m" parameter
-  mkfifo "${ERRPIPE}"
-  # trap EXIT so that we may remove the FIFO pipe
-  trap "rm -f -- '${ERRPIPE}'" EXIT
-
   # set up temporary
   local line=''
   # while there's a (raw) line to be read
@@ -750,13 +755,26 @@ declare -i i=0
 # == Traps and logging =========================================================
 # ==============================================================================
 
-# launch the errListener
-errListener &
+# declare PID variables
+declare -i PNPID
+declare -i PLPID
+declare -i ELPID
 
-# DUMMY: needed in order to extract string
-: $"Running \`%s' at \`%s:%s'"
 # trap the DEBUG signal and turn it into a log entry
-trap "debugTrap \"\${BASH_COMMAND}\" \"\${FUNCNAME}\" \"\${LINENO}\"" DEBUG
+trap "exitTrap" EXIT ERR
+
+# create the ERRPIPE FIFO
+# @TODO: set up permissions on mkfifo with the "-m" parameter
+mkfifo "${ERRPIPE}"
+# create the ERRPIPE FIFO
+# @TODO: set up permissions on mkfifo with the "-m" parameter
+mkfifo "${PRNPIPE}"
+
+# launch the errListener
+errListener & ELPID=$!
+
+# trap the DEBUG signal and turn it into a log entry
+trap "debugTrap \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"" DEBUG
 
 # logging starts here
 declare -ru DO_TRAP_LOGGING='Y'
