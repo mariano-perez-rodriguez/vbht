@@ -2,4 +2,4 @@
 
 # Try to attach the added usb device to the currently capturing VM,
 # if there's no such a VM, this does nothing
-ACTION=="add", SUBSYSTEMS=="usb", DRIVER=="usb", RUN+="/bin/bash -c '/opt/vbht/vbht attach %p & exit'"
+ACTION=="add", SUBSYSTEMS=="usb", DRIVER=="usb", RUN+="/bin/bash -c '/opt/vbht/vbht attach -- %p & exit'"
