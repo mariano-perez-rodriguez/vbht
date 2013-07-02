@@ -47,8 +47,6 @@ TODO:
 
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
-- hacer que los scripts se verifiquen a si mismos con md5 (u otro hash) antes de empezar (esta etapa NO loguea NADA, si falla, el script ni corre).
-
 - para recargar reglas de udev (SIN inotify, con lo cual funciona con links simbolicos... asumo)
   http://reactivated.net/writing_udev_rules.html
     ver "Testing and debugging > Putting your rules into action"
