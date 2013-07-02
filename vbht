@@ -68,7 +68,7 @@ verifyNeededCommands() {
   # loop through each command
   for comm in "${NEEDEDCOMMANDS[@]}"; do
     # try to hash it (throw away output and errors)
-    if ! hash "$comm" 1> /dev/null 2> /dev/null; then
+    if ! hash "$comm" &> /dev/null; then
       printf $"Command not found in path: \`%s'" "$comm"
       (( missing++ ))
     fi
@@ -192,7 +192,7 @@ attachKbds() {
     # if we got a valid address
     if [[ "${temp}" ]]; then
       # try to attach it (ignore errors, we'll return accordingly)
-      vboxmanage controlvm "${1}" usbattach "${temp}" 1> "${ERRPIPE}" 2> "${ERRPIPE}" || (( ret++ )) ||:
+      vboxmanage controlvm "${1}" usbattach "${temp}" &> "${ERRPIPE}" || (( ret++ )) ||:
     fi
   done
   # if there were errors, return accordingly
@@ -327,8 +327,8 @@ disableKbdsMice() {
   fi
   # sort the given XIDs, and, on the one hand, disable them, and on the
   # other concatenate them into a comma-terminated list of XIDs
-  # @DEBUG: xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr $'\n' ',')"
-  xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr $'\n' ',')"
+  # @DEBUG: xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 &> "${ERRPIPE}") | tr $'\n' ',')"
+  xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 &> "${ERRPIPE}") | tr $'\n' ',')"
   # output the list
   echo "${xids%,}"
 }
@@ -355,8 +355,8 @@ enableKbdsMice() {
   fi
   # sort the given XIDs, and, on the one hand, enable them, and on the
   # other concatenate them into a comma-terminated list of XIDs
-  # @DEBUG: xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr $'\n' ',')"
-  xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 1> "${ERRPIPE}" 2> "${ERRPIPE}") | tr $'\n' ',')"
+  # @DEBUG: xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 &> "${ERRPIPE}") | tr $'\n' ',')"
+  xids="$(tr ',[[:space:]]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 &> "${ERRPIPE}") | tr $'\n' ',')"
   # output the list
   echo "${xids%,}"
 }
@@ -1247,7 +1247,7 @@ if [[ "${action}" == 'S' ]]; then
         # create the print directory if not already existing
         mkdir -p "${PRINTDIR}"
         # launch the print notifier in background
-        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" 2> "${ERRPIPE}" > "${PRNPIPE}" & PNPID=$!
+        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & PNPID=$!
       fi
 
       # if we're going to attach keyboards disable input devices now
@@ -1311,10 +1311,10 @@ if [[ "${action}" == 'S' ]]; then
       # if we disabled input devices, re-enable them now
       if [[ "${indevs}" ]]; then
         # try to re-enable input devices
-        if ! enableKbdsMice "${indevs}" 1> "${ERRPIPE}" 2> "${ERRPIPE}"; then
+        if ! enableKbdsMice "${indevs}" &> "${ERRPIPE}"; then
           # if re-enabling failed, yell and try to re-enable all of them
           log ${SEV_ERROR} $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
-          if ! enableKbdsMice 1> "${ERRPIPE}" 2> "${ERRPIPE}"; then log ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
+          if ! enableKbdsMice &> "${ERRPIPE}"; then log ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
         fi
       fi
 
@@ -1524,11 +1524,9 @@ elif [[ "${action}" == 'X' ]]; then
       esac
       # prepend "sudo" prefix
       if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
-      # append error redirection
-      line="${line} 2> ${ERRPIPE}"
 
       # evaluate stop line and report non-zero status
-      if ! eval -- "${line}"; then log ${SEV_WARNING} $"stoppage returned non-zero (%d) status!" $? >&2; fi
+      if ! eval -- "${line} 2> ${ERRPIPE}"; then log ${SEV_WARNING} $"stoppage returned non-zero (%d) status!" $?; fi
     fi
   fi
 fi
