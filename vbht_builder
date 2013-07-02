@@ -177,10 +177,10 @@ The actions to be performed are the following:
 
 EOM
 read -rsN1 -p $'Enter `Y\' to continue, anything else to exit...'
+echo
 
 # if anything other that "Y" was entered, exit
 if [[ "$REPLY" != 'Y' ]]; then
-  echo
   echo
   echo 'Aborted by user!'
   exit
