@@ -21,7 +21,7 @@
 set +H  # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
 
 # if there's a vbht instance running, forward the event,
-if [[ "$(/opt/vbht/vbht info -M)" != '' ]]; then
+if [[ "$(/opt/vbht/vbht info -M)" ]]; then
   exec /opt/vbht/vbht forward sleep > /dev/null 2> /dev/null
 # otherwise, just call the old ACPI handler
 else
