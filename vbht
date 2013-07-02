@@ -386,7 +386,7 @@ debugTrap() {
 exitTrap() {
   # kill printNotifier
   if [[ ${PNPID:-} ]]; then kill "${PNPID}" ||: ; fi
-  # kill printlistener
+  # kill printListener
   if [[ ${PLPID:-} ]]; then kill "${PLPID}" ||: ; fi
   # kill errlistener
   if [[ ${ELPID:-} ]]; then kill "${ELPID}" ||: ; fi
@@ -443,6 +443,10 @@ log() {
   echo "[${prevRUNHASH:-${RUNHASH}}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}] ${std_log}" >> "${LOGFILE}"
 }
 
+# ------------------------------------------------------------------------------
+# -- Duplex functions ----------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 # Listen to stderr pipe and log
 #
 # Continuously read from ERRPIPE and log whatever gets read as SEV_STDERR
@@ -480,44 +484,30 @@ errListener() {
 #
 # Taken from: https://github.com/rvoicilas/inotify-tools/issues/5#issuecomment-17756009
 printListener() {
-  local temp=''
-  # get the canonical path to the directory and create it if it doesn't exist
-  local -r dir="$(readlink -m -- "${PRINTDIR}" 2> "${ERRPIPE}")"; mkdir -p "${dir}"
-
-  # (safely) ignore SIGPIPE
-  trap ':' SIGPIPE
-  # launch inotifywait in monitor mode, listening to "close_write" (in order
-  # to get notified when a file is created) and "delete_self" (in order to be
-  # able of self-termination) events, and reporting both the file affected,
-  # and the event,
-  inotifywait -qme close_write,delete_self --format '%e %f' -- "${dir}" 2> "${ERRPIPE}" |
-  # and read each line in turn (turn event into all-caps in order to avoid problems)
-  while IFS=' ' read -r event file; do event="${event^^}"
-    # in case the directory being listened to gets deleted, signal SIGPIPE to
-    # all the processes in this process group and exit
-    if [[ "${event}" == 'DELETE_SELF' ]]; then kill -s SIGPIPE 0; exit 0; fi
+  # set up temporary
+  local -u temp=''
+  local file=''
+  # while there's a (raw) line to be read
+  while IFS= read -r file; do
     # verify we actually have a (readable) file
-    if ! [[ -r "${dir}/${file}" ]]; then continue; fi
+    if ! [[ -r "${PRINTDIR}/${file}" && "${launch_print_listener:-}" == 'Y' ]]; then continue; fi
     # verify the file is actually a PDF one
-    temp=${file:(-4)}; if [[ "${temp^^}" == '.PDF' ]]; then
+    temp=${file:(-4)}; if [[ "${temp}" == '.PDF' ]]; then
       # print the recently created file without a banner and deleting it
       # when done (if there are errors, log them)
       (
-        if ! lpr -hr "${dir}/${file}"; then
+        if ! lpr -hr "${PRINTDIR}/${file}"; then
           log ${SEV_ERROR} $"lpr returned non-zero (%d) status" $?
         else
-          rm -f -- "${dir}/${file}"
+          rm -f -- "${PRINTDIR}/${file}"
         fi
       ) & disown %1
     else
       # otherwise, just remove it, we don't care for it
-      rm -f "${dir}/${file}" > "${ERRPIPE}" 2> "${ERRPIPE}"
+      rm -f "${PRINTDIR}/${file}" > "${ERRPIPE}" 2> "${ERRPIPE}"
     fi
-  done
-  # return SEGPIPE trap to normal
-  trap SIGPIPE
-  # make sure we remove the directory and return error
-  rm -rf "${dir}"; return 1
+  # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
+  done <> "${PRNPIPE}"
 }
 
 
@@ -752,16 +742,13 @@ declare -i i=0
 
 
 # ==============================================================================
-# == Traps and logging =========================================================
+# == Initialization ============================================================
 # ==============================================================================
 
 # declare PID variables
 declare -i PNPID
 declare -i PLPID
 declare -i ELPID
-
-# trap the DEBUG signal and turn it into a log entry
-trap "exitTrap" EXIT ERR
 
 # create the ERRPIPE FIFO
 # @TODO: set up permissions on mkfifo with the "-m" parameter
@@ -772,7 +759,16 @@ mkfifo "${PRNPIPE}"
 
 # launch the errListener
 errListener & ELPID=$!
+# launch the printListener
+printListener & PLPID=$!
 
+
+# ==============================================================================
+# == Traps and logging =========================================================
+# ==============================================================================
+
+# trap the DEBUG signal and turn it into a log entry
+trap "exitTrap" EXIT ERR
 # trap the DEBUG signal and turn it into a log entry
 trap "debugTrap \"\${BASH_COMMAND}\" \"\${FUNCNAME:-main}\" \"\${LINENO}\"" DEBUG
 
@@ -1247,8 +1243,10 @@ if [[ "${action}" == 'S' ]]; then
 
       # if we have to launch the print listener, do that now
       if [[ "${launch_print_listener}" == 'Y' ]]; then
-        # launch the print listener in background
-        printListener &
+        # create the print directory if not already existing
+        mkdir -p "${PRINTDIR}"
+        # launch the print notifier in background
+        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" 2> "${ERRPIPE}" > "${PRNPIPE}" & PNPID=$!
       fi
 
       # if we're going to attach keyboards disable input devices now
@@ -1321,9 +1319,6 @@ if [[ "${action}" == 'S' ]]; then
 
       # wait for the virtual machine to finish (or be finished)
       wait "${vbPID}"
-
-      # kill the print listener (by removing the print directory)
-      rm -rf -- "${PRINTDIR}"
 
       # try to restore ignored warnings, if the command failed, at least
       # let the user know which were the original warnings
