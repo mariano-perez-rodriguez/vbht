@@ -385,17 +385,17 @@ debugTrap() {
 # Depends: PNPID, PLPID, ELPID, PRNPIPE, ERRPIPE
 exitTrap() {
   # kill printNotifier
-  if [[ ${PNPID:-} ]]; then kill "${PNPID}" ||: ; fi
+  if [[ ${PNPID:-} ]]; then kill "${PNPID}" &> /dev/null ||: ; fi
   # kill printListener
-  if [[ ${PLPID:-} ]]; then kill "${PLPID}" ||: ; fi
+  if [[ ${PLPID:-} ]]; then kill "${PLPID}" &> /dev/null ||: ; fi
   # kill errlistener
-  if [[ ${ELPID:-} ]]; then kill "${ELPID}" ||: ; fi
+  if [[ ${ELPID:-} ]]; then kill "${ELPID}" &> /dev/null ||: ; fi
   # remove lock file (if we launched a VM)
 
   # remove print pipe
-  rm -f -- "${PRNPIPE}"
+  rm -f -- "${PRNPIPE}" &> /dev/null
   # remove error pipe
-  rm -f -- "${ERRPIPE}"
+  rm -f -- "${ERRPIPE}" &> /dev/null
 }
 
 # ------------------------------------------------------------------------------
@@ -440,7 +440,7 @@ log() {
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
   # write to the log file
-  echo "[${prevRUNHASH:-${RUNHASH}}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}] ${std_log}" >> "${LOGFILE}"
+  echo "[${RUNHASH}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}] ${std_log}" >> "${LOGFILE}"
 }
 
 # ------------------------------------------------------------------------------
@@ -461,7 +461,8 @@ errListener() {
   # while there's a (raw) line to be read
   while IFS= read -r line; do
     # if it's not blank, log it with SEV_STDERR
-    if [[ "${line}" ]]; then log ${SEV_STDERR} "${line}"; fi
+	# IMPORTANT: REPLACE '%' WITH '%%' IN ORDER FOR PRINTF NOT TO CHOKE
+    if [[ "${line}" ]]; then log ${SEV_STDERR} "${line//%/%%}"; fi
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
   done <> "${ERRPIPE}"
 }
@@ -504,7 +505,7 @@ printListener() {
       ) & disown %1
     else
       # otherwise, just remove it, we don't care for it
-      rm -f "${PRINTDIR}/${file}" > "${ERRPIPE}" 2> "${ERRPIPE}"
+      rm -f "${PRINTDIR}/${file}" &> "${ERRPIPE}"
     fi
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
   done <> "${PRNPIPE}"
