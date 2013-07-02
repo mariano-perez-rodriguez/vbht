@@ -400,6 +400,18 @@ enableKbdsMice() {
 }
 
 # ------------------------------------------------------------------------------
+# -- Trap functions ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+cleanup() {
+  # kill printlistener
+  # kill errlistener
+  # remove lock file (if we launched a VM)
+  # remove print pipe
+  # remove error pipe
+}
+
+# ------------------------------------------------------------------------------
 # -- Log functions -------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
@@ -558,7 +570,7 @@ declare -r RUNHASH=$(tr -cd '[:alnum:]' < /dev/urandom | head -c "${HASHLENGTH}"
 # the previous RUNHASH
 declare prevRUNHASH=''
 # error pipe for this script's run (defined in terms of RUNHASH)
-declare -r ERRPIPE="/tmp/${RUNHASH}"
+declare -r ERRPIPE="/tmp/ERRPIPE-${RUNHASH}"
 # logfile directory
 declare -r LOGDIR='/var/log/vbht'
 # logfile name
@@ -619,6 +631,8 @@ declare -ri KBDATTACHINIDWELL=5 KBDATTACHMAXTRIES=20 KBDATTACHINTDWELL=2
 declare -r HOME=${HOME:-/root}
 # print directory name
 declare -r PRINTDIR="${HOME}/.vbht-print"
+# print pipe for this script's run (defined in terms of RUNHASH)
+declare -r PRNPIPE="/tmp/PRNPIPE-${RUNHASH}"
 
 # ignored VirtualBox(R) warnings
 declare -r IGNOREWARNINGS='confirmGoingFullscreen,confirmGoingSeamless,confirmInputCapture,confirmVMReset,remindAboutAutoCapture,remindAboutGoingFullscreen,remindAboutGoingSeamless,remindAboutInputCapture,remindAboutMouseIntegrationOff,remindAboutMouseIntegrationOn,remindAboutPausedVMInput,remindAboutWrongColorDepth,showRuntimeError.warning.HostAudioNotResponding'
