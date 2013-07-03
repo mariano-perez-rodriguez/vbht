@@ -46,8 +46,6 @@ TODO:
 
 - !!! verificar que no quede corriendo inotifywait !!!
 
-- considerar: https://trac.id.ethz.ch/projects/bashcritic/
-
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
 
 - OJO con los newlines en el pipe de STDERR!!! esto puede complicarnos el parseo del log mas tarde.
