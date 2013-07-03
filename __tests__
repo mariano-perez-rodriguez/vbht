@@ -1,0 +1,76 @@
+Test: 
+   vbht
+               [ Y ]  -h
+               [ Y ]  --help
+               
+               [ Y ]  -V
+               [ Y ]  --version
+               
+               [ Y ]  -L
+               [ Y ]  --license
+   vbht start 
+               [ Y ] NAME
+                  [ Y ] -A
+                  [ Y ] --auto-attach
+                  [ Y ] -a
+                  [ Y ] --no-auto-attach
+                  
+                  [ Y ] -K
+                  [ Y ] --kbd-attach
+                  [ Y ] -k
+                  [ Y ] --no-kbd-attach
+                  
+                  [ Y ] -F
+                  [ Y ] --acpi-forward
+                  [ N ] -f
+                  [ N ] --no-acpi-forward
+
+                  [ Y ] -P
+                  [ Y ] --print-listener
+                  [ Y ] -p
+                  [ Y ] --no-print-listener
+                  
+                  [ Y ] -X
+                  [ Y ] --new-X
+                  [ Y ] -x
+                  [ Y ] --no-new-X
+                  
+                  [ Y ] -- DEVPATH
+
+               [ Y ] UUID
+
+   vbht attach 
+               [ Y ] DEVPATH
+
+   vbht forward  
+               [ Y ]  power
+               [ ? ]  sleep
+
+   vbht info 
+               [ Y ]  -M
+               [ Y ]  --machine-readable
+
+               [ Y ]  -m
+               [ Y ]  --no-machine-readable
+
+   vbht stop 
+               [ Y ]  -a
+               [ Y ]  --acpi
+
+               [ Y ]  -o
+               [ Y ]  --off
+               [ Y ]  -r
+               [ Y ]  --reset
+
+               [ Y ]  -s
+               [ Y ]  --save
+
+               [ ? ]  -l
+               [ ? ]  --sleep
+
+common options:
+               [  ]  -q
+               [  ]  --quiet
+
+               [  ]  -v
+               [  ]  --verbose
