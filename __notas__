@@ -76,4 +76,4 @@ TODO:
 
 - Bug: VBox has problems to attach modems (i.e. Bluetooth).
 
-- Bug?: Inside a Windows machine pressing Ctrl-Alt-Supr sends a reset signal (posiblemente sea  Windows (por deshabilitar algún servicio de más en la instalación)).
+- Bug: VBox has problems to habilitate the sleep (and hibernate) option in Windows).
