@@ -229,7 +229,7 @@ getWarns() {
 setWarns() {
   # turn the comma-separated list into a newline-separated list, remove empty
   # lines, sort it, and turn it back into a comma-separated list
-  local -r temp="$(tr ',[:space:]' $'\n' <<< "${*}" | grep . | sort -u | tr $'\n' ',')"
+	  local -r temp="$(tr ',[:space:]' $'\n' <<< "${*}" | grep . | sort -u | tr $'\n' ',')"
   # set them
   vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> "${ERRPIPE}"
 }
@@ -760,8 +760,10 @@ mkfifo "${PRNPIPE}"
 
 # launch the listeners (do as in http://stackoverflow.com/a/715041 in order
 # to suppress termination messages)
-{ errListener   & } &> /dev/null; ELPID=$!
-{ printListener & } &> /dev/null; PLPID=$!
+errListener   & ELPID=$!
+printListener & PLPID=$!
+
+disown "${ELPID}" "${PLPID}"
 
 
 # ==============================================================================
@@ -1247,7 +1249,7 @@ if [[ "${action}" == 'S' ]]; then
         # create the print directory if not already existing
         mkdir -p "${PRINTDIR}"
         # launch the print notifier in background
-        { inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & } &> /dev/null; PNPID=$!
+        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & PNPID=$!
       fi
 
       # if we're going to attach keyboards disable input devices now
