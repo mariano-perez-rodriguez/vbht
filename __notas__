@@ -41,10 +41,11 @@ DONE:
 
 + ver como hacer para que el jobcontrol de BASH no rompa los huevos al final de una corrida avisando que se terminaron los listeners
 
++ !!! verificar que no quede corriendo inotifywait !!!
+
+
 
 TODO:
-
-- !!! verificar que no quede corriendo inotifywait !!!
 
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
 
@@ -70,3 +71,9 @@ TODO:
   >>>hola K1 lalala K2lolo K1 chau<<<
 
   esto hace que las "tags" del estilo ":<nombre>" se reemplacen por el valor asociado a la clave "<nombre>" en el array dado; la ultima regla (que reemplaza ":_" por ":") esta para permitir que en el texto de salida aparezca algo de la forma ":<nombre>" sin que sea reemplazado.
+
+- Add: --help for every action.
+
+- Bug: VBox has problems to attach modems (i.e. Bluetooth).
+
+- Bug?: Inside a Windows machine pressing Ctrl-Alt-Supr sends a reset signal (posiblemente sea  Windows (por deshabilitar algún servicio de más en la instalación)).
