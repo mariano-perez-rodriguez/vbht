@@ -39,12 +39,14 @@ DONE:
 
 + ver si el artilugio de leer con "<>" se puede usar para simplificar el printListener()
 
++ ver como hacer para que el jobcontrol de BASH no rompa los huevos al final de una corrida avisando que se terminaron los listeners
+
 
 TODO:
 
-- considerar: https://trac.id.ethz.ch/projects/bashcritic/
+- !!! verificar que no quede corriendo inotifywait !!!
 
-- ver como hacer para que el jobcontrol de BASH no rompa los huevos al final de una corrida avisando que se terminaron los listeners
+- considerar: https://trac.id.ethz.ch/projects/bashcritic/
 
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
 

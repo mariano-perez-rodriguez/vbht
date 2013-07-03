@@ -461,7 +461,7 @@ errListener() {
   # while there's a (raw) line to be read
   while IFS= read -r line; do
     # if it's not blank, log it with SEV_STDERR
-	# IMPORTANT: REPLACE '%' WITH '%%' IN ORDER FOR PRINTF NOT TO CHOKE
+    # IMPORTANT: REPLACE '%' WITH '%%' IN ORDER FOR PRINTF NOT TO CHOKE
     if [[ "${line}" ]]; then log ${SEV_STDERR} "${line//%/%%}"; fi
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
   done <> "${ERRPIPE}"
@@ -758,10 +758,10 @@ mkfifo "${ERRPIPE}"
 # @TODO: set up permissions on mkfifo with the "-m" parameter
 mkfifo "${PRNPIPE}"
 
-# launch the errListener
-errListener & ELPID=$!
-# launch the printListener
-printListener & PLPID=$!
+# launch the listeners (do as in http://stackoverflow.com/a/715041 in order
+# to suppress termination messages)
+{ errListener   & } &> /dev/null; ELPID=$!
+{ printListener & } &> /dev/null; PLPID=$!
 
 
 # ==============================================================================
@@ -1247,7 +1247,7 @@ if [[ "${action}" == 'S' ]]; then
         # create the print directory if not already existing
         mkdir -p "${PRINTDIR}"
         # launch the print notifier in background
-        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & PNPID=$!
+        { inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & } &> /dev/null; PNPID=$!
       fi
 
       # if we're going to attach keyboards disable input devices now
