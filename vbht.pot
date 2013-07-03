@@ -42,166 +42,324 @@ msgstr ""
 msgid "Stderr"
 msgstr ""
 
-#: vbht:500
+#: vbht:501
 msgid "lpr returned non-zero (%d) status"
 msgstr ""
 
-#: vbht:783
+#: vbht:784
 msgid "VBHT started"
 msgstr ""
 
-#: vbht:786
+#: vbht:787
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:790
-msgid "Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\\n               [ --auto-attach ]    [ --no-auto-attach ]\\n               [ --kbd-attach ]     [ --no-kbd-attach ]\\n               [ --acpi-forward ]   [ --no-acpi-forward ]\\n               [ --print-listener ] [ --no-print-listener ]\\n               [ --new-X ]          [ --no-new-X ]\\n               [ DEVPATH... ]\\n   or: vbht attach [ DEVPATH... ]\\n   or: vbht forward { power | sleep }\\n   or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]\\n   or: vbht logs [ -FfEeWwIiDdSs ]\\n               [ --show-fatal ]   [ --no-show-fatal ]\\n               [ --show-error ]   [ --no-show-error ]\\n               [ --show-warning ] [ --no-show-warning ]\\n               [ --show-info ]    [ --no-show-info ]\\n               [ --show-debug ]   [ --no-show-debug ]\\n               [ --show-stderr ]  [ --no-show-stderr ]\\n               { UUID | NAME | HASH | - ...}\\n   or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]\\n\\ncommon options: [ -qv ] [ --quiet ] [ --verbose ] [--]\\n\\n   or: vbht { -h | --help }\\n   or: vbht { -V | --version }\\n   or: vbht { -L | --license }\\n\\nLaunch VirtualBox(R) virtual machines in \\`capturing' mode, thus effectively\\nimplementing \\`kiosk mode', allowing for transparent printing, keyboard jailing,\\nand USB auto-attachment.\\n\\n      -A, --auto-attach        automatically attach USB devices plugged in\\n                               during the operation of the virtual machine,\\n                               additionally, allow them to be attached through\\n                               vbht\\n      -a, --no-auto-attach     do NOT automatically attach USB devices plugged\\n                               in during the operation of the virtual machine,\\n                               nor permit them to be attached through vbht\\n      -K, --kbd-attach         try to attach USB keyboards\\n      -k, --no-kbd-attach      do NOT try to attach USB keyboards\\n      -F, --acpi-forward       forward ACPI power-button / sleep-button events\\n                               to the virtual machine\\n      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual\\n                               machine\\n      -P, --print-listener     run the print listening script\\n      -p, --no-print-listener  do NOT run the print listening script\\n      -X, --new-X              launch a fresh X server\\n      -x, --no-new-X           do NOT launch a fresh X server\\n\\n      -M, --machine-readable     generate output in machine readable format\\n      -m, --no-machine-readable  generate output in human readable format\\n\\n      -F, --show-fatal       show \\`fatal' log lines\\n      -f, --no-show-fatal    do NOT show \\`fatal' log lines\\n      -E, --show-error       show \\`error' log lines\\n      -e, --no-show-error    do NOT show \\`error' log lines\\n      -W, --show-warning     show \\`warning' log lines\\n      -w, --no-show-warning  do NOT show \\`warning' log lines\\n      -I, --show-info        show \\`info' log lines\\n      -i, --no-show-info     do NOT show \\`info' log lines\\n      -D, --show-debug       show \\`debug' log lines\\n      -d, --no-show-debug    do NOT show \\`debug' log lines\\n      -S, --show-stderr      show \\`stderr' log lines\\n      -s, --no-show-stderr   do NOT show \\`stderr' log lines\\n\\n      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine\\n      -o, --off    turn the capturing virtual machine off\\n      -r, --reset  reset the capturing virtual machine\\n      -s, --save   save the capturing virtual machine's state\\n      -l, --sleep  send ACPI sleep signal to the capturing virtual machine\\n\\n      -q, --quiet    decrease by 1 the verbosity level\\n      -v, --verbose  increase by 1 the verbosity level\\n\\n      --  signal the end of options, lake the rest of the parameters literally\\n\\n      -h, --help     display this help and exit\\n      -V, --version  output version information and exit\\n      -L, --license  display the GNU Affero General Public License and exit\\n\\nActions: the first argument to vbht must be either \\`--help', \\`--version',\\n  \\`--license', or an ACTION, ie. one of: \\`start', \\`attach', \\`forward', \\`info',\\n  \\`logs', or \\`stop'.\\n\\n      start    start the virtual machine NAME or UUID in capturing mode\\n      attach   attach the (USB) device found at DEVPATH to the virtual machine\\n               currently running in capturing mode\\n      forward  forward an ACPI (power/sleep) event to the capturing virtual\\n               machine, this action is completely silent (ie. no output is\\n               generated to either stdout or stderr) when no errors\\n      info     return information about the virtual machine currently running\\n               in capturing mode (if there's one such machine)\\n      logs     show (coloured) log files for the given virtual machine, or for\\n               the currently running one, if there's one such and \\`-' given\\n      stop     stop the virtual machine currently running in capturing mode\\n\\nVerbosity: the 6 verbosity levels are \\`fatal', \\`error', \\`warning', \\`info',\\n  \\`debug', and \\`stderr'.\\n\\n      fatal    a condition which makes it impossible to go on\\n      error    an error condition that can be ignored in order to go on\\n      warning  an error condition that has no immediate consequences\\n      info     an informational message about the state of the program\\n      debug    an execution log of every command ran\\n      stderr   the standard error lines, as redirected internally\\n\\nEnvironment variables: several environment variables, with the \\`VBHT_' prefix,\\n  are used to provide defaults: \\`VBHT_AUTO_ATTACH', \\`VBHT_ATTACH_KEYBOARD',\\n  \\`VBHT_ACPI_FORWARD', \\`VBHT_LAUNCH_PRINT_LISTENER', \\`VBHT_USE_NEW_X', and\\n  \\`VBHT_INFO_MACHINE_READABLE' can take either the \\`Y' or \\`N' values and\\n  provide defaults for their corresponding options; the \\`VBHT_STOP_METHOD'\\n  variable can take either one of the \\`A', \\`O', \\`R', \\`S', \\`L' values and each\\n  determines a stoppage type whose equivalence to the options mentioned above\\n  is given by:\\n\\n      A  -a, --acpi\\n      O  -o, --off\\n      R  -r, --reset\\n      S  -s, --save\\n      L  -l, --sleep\\n\\n  last, the \\`VBHT_VERBOSITY' variable may take any integer number to be taken\\n  as the default verbosity value (note, however, that values below 0 or above 6\\n  will be ignored and truncated to that range).\\n\\nExamples (\\`>' stands for the shell prompt):\\n\\n    > vbht start 'My VM' --no-print-listener --no-auto-attach\\n\\n    > vbht attach /devices/pci0123:45/6789:01:23.4/usb5/6-7\\n\\n    > vbht info --machine-readable\\n    12345:67890:01234567-89ab-cdef-0123-4567890abcde:HASH:N:Y:N:Y:Y\\n\\n    > vbht stop --acpi\\n\\nExit status:\\n   0  if OK,\\n   1  if syntax error,\\n   2  if no capturing virtual machines found.\\n\\n\\nNOTES:\\n  1. if more than one conflicting option is given (eg. more than one stop type),\\n     the last one takes precedence (this does NOT apply to verbosity options),\\n  2. the DEVPATH argument has the same syntax as udev's \\`\\$devpath' or \\`%%p'\\n     replaceable parameter (see UDEV(7)).\\n\\n\\nWritten by Mariano Perez Rodriguez.\\nReport vbht bugs to: <mariano.perez.rodriguez@gmail.com>\\n"
+#: vbht:791
+msgid ""
+"Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\n"
+"               [ --auto-attach ]    [ --no-auto-attach ]\n"
+"               [ --kbd-attach ]     [ --no-kbd-attach ]\n"
+"               [ --acpi-forward ]   [ --no-acpi-forward ]\n"
+"               [ --print-listener ] [ --no-print-listener ]\n"
+"               [ --new-X ]          [ --no-new-X ]\n"
+"               [ DEVPATH... ]\n"
+"   or: vbht attach [ DEVPATH... ]\n"
+"   or: vbht forward { power | sleep }\n"
+"   or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]\n"
+"   or: vbht logs [ -FfEeWwIiDdSs ]\n"
+"               [ --show-fatal ]   [ --no-show-fatal ]\n"
+"               [ --show-error ]   [ --no-show-error ]\n"
+"               [ --show-warning ] [ --no-show-warning ]\n"
+"               [ --show-info ]    [ --no-show-info ]\n"
+"               [ --show-debug ]   [ --no-show-debug ]\n"
+"               [ --show-stderr ]  [ --no-show-stderr ]\n"
+"               { UUID | NAME | HASH | - ...}\n"
+"   or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]\n"
+"\n"
+"common options: [ -qv ] [ --quiet ] [ --verbose ] [--]\n"
+"\n"
+"   or: vbht { -h | --help }\n"
+"   or: vbht { -V | --version }\n"
+"   or: vbht { -L | --license }\n"
+"\n"
+"Launch VirtualBox(R) virtual machines in \\`capturing' mode, thus effectively\n"
+"implementing \\`kiosk mode', allowing for transparent printing, keyboard jailing,\n"
+"and USB auto-attachment.\n"
+"\n"
+"      -A, --auto-attach        automatically attach USB devices plugged in\n"
+"                               during the operation of the virtual machine,\n"
+"                               additionally, allow them to be attached through\n"
+"                               vbht\n"
+"      -a, --no-auto-attach     do NOT automatically attach USB devices plugged\n"
+"                               in during the operation of the virtual machine,\n"
+"                               nor permit them to be attached through vbht\n"
+"      -K, --kbd-attach         try to attach USB keyboards\n"
+"      -k, --no-kbd-attach      do NOT try to attach USB keyboards\n"
+"      -F, --acpi-forward       forward ACPI power-button / sleep-button events\n"
+"                               to the virtual machine\n"
+"      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual\n"
+"                               machine\n"
+"      -P, --print-listener     run the print listening script\n"
+"      -p, --no-print-listener  do NOT run the print listening script\n"
+"      -X, --new-X              launch a fresh X server\n"
+"      -x, --no-new-X           do NOT launch a fresh X server\n"
+"\n"
+"      -M, --machine-readable     generate output in machine readable format\n"
+"      -m, --no-machine-readable  generate output in human readable format\n"
+"\n"
+"      -F, --show-fatal       show \\`fatal' log lines\n"
+"      -f, --no-show-fatal    do NOT show \\`fatal' log lines\n"
+"      -E, --show-error       show \\`error' log lines\n"
+"      -e, --no-show-error    do NOT show \\`error' log lines\n"
+"      -W, --show-warning     show \\`warning' log lines\n"
+"      -w, --no-show-warning  do NOT show \\`warning' log lines\n"
+"      -I, --show-info        show \\`info' log lines\n"
+"      -i, --no-show-info     do NOT show \\`info' log lines\n"
+"      -D, --show-debug       show \\`debug' log lines\n"
+"      -d, --no-show-debug    do NOT show \\`debug' log lines\n"
+"      -S, --show-stderr      show \\`stderr' log lines\n"
+"      -s, --no-show-stderr   do NOT show \\`stderr' log lines\n"
+"\n"
+"      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine\n"
+"      -o, --off    turn the capturing virtual machine off\n"
+"      -r, --reset  reset the capturing virtual machine\n"
+"      -s, --save   save the capturing virtual machine's state\n"
+"      -l, --sleep  send ACPI sleep signal to the capturing virtual machine\n"
+"\n"
+"      -q, --quiet    decrease by 1 the verbosity level\n"
+"      -v, --verbose  increase by 1 the verbosity level\n"
+"\n"
+"      --  signal the end of options, lake the rest of the parameters literally\n"
+"\n"
+"      -h, --help     display this help and exit\n"
+"      -V, --version  output version information and exit\n"
+"      -L, --license  display the GNU Affero General Public License and exit\n"
+"\n"
+"Actions: the first argument to vbht must be either \\`--help', \\`--version',\n"
+"  \\`--license', or an ACTION, ie. one of: \\`start', \\`attach', \\`forward', \\`info',\n"
+"  \\`logs', or \\`stop'.\n"
+"\n"
+"      start    start the virtual machine NAME or UUID in capturing mode\n"
+"      attach   attach the (USB) device found at DEVPATH to the virtual machine\n"
+"               currently running in capturing mode\n"
+"      forward  forward an ACPI (power/sleep) event to the capturing virtual\n"
+"               machine, this action is completely silent (ie. no output is\n"
+"               generated to either stdout or stderr) when no errors\n"
+"      info     return information about the virtual machine currently running\n"
+"               in capturing mode (if there's one such machine)\n"
+"      logs     show (coloured) log files for the given virtual machine, or for\n"
+"               the currently running one, if there's one such and \\`-' given\n"
+"      stop     stop the virtual machine currently running in capturing mode\n"
+"\n"
+"Verbosity: the 6 verbosity levels are \\`fatal', \\`error', \\`warning', \\`info',\n"
+"  \\`debug', and \\`stderr'.\n"
+"\n"
+"      fatal    a condition which makes it impossible to go on\n"
+"      error    an error condition that can be ignored in order to go on\n"
+"      warning  an error condition that has no immediate consequences\n"
+"      info     an informational message about the state of the program\n"
+"      debug    an execution log of every command ran\n"
+"      stderr   the standard error lines, as redirected internally\n"
+"\n"
+"Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
+"  are used to provide defaults: \\`VBHT_AUTO_ATTACH', \\`VBHT_ATTACH_KEYBOARD',\n"
+"  \\`VBHT_ACPI_FORWARD', \\`VBHT_LAUNCH_PRINT_LISTENER', \\`VBHT_USE_NEW_X', and\n"
+"  \\`VBHT_INFO_MACHINE_READABLE' can take either the \\`Y' or \\`N' values and\n"
+"  provide defaults for their corresponding options; the \\`VBHT_STOP_METHOD'\n"
+"  variable can take either one of the \\`A', \\`O', \\`R', \\`S', \\`L' values and each\n"
+"  determines a stoppage type whose equivalence to the options mentioned above\n"
+"  is given by:\n"
+"\n"
+"      A  -a, --acpi\n"
+"      O  -o, --off\n"
+"      R  -r, --reset\n"
+"      S  -s, --save\n"
+"      L  -l, --sleep\n"
+"\n"
+"  last, the \\`VBHT_VERBOSITY' variable may take any integer number to be taken\n"
+"  as the default verbosity value (note, however, that values below 0 or above 6\n"
+"  will be ignored and truncated to that range).\n"
+"\n"
+"Examples (\\`>' stands for the shell prompt):\n"
+"\n"
+"    > vbht start 'My VM' --no-print-listener --no-auto-attach\n"
+"\n"
+"    > vbht attach /devices/pci0123:45/6789:01:23.4/usb5/6-7\n"
+"\n"
+"    > vbht info --machine-readable\n"
+"    12345:67890:01234567-89ab-cdef-0123-4567890abcde:HASH:N:Y:N:Y:Y\n"
+"\n"
+"    > vbht stop --acpi\n"
+"\n"
+"Exit status:\n"
+"   0  if OK,\n"
+"   1  if syntax error,\n"
+"   2  if no capturing virtual machines found.\n"
+"\n"
+"\n"
+"NOTES:\n"
+"  1. if more than one conflicting option is given (eg. more than one stop type),\n"
+"     the last one takes precedence (this does NOT apply to verbosity options),\n"
+"  2. the DEVPATH argument has the same syntax as udev's \\`\\$devpath' or \\`%%p'\n"
+"     replaceable parameter (see UDEV(7)).\n"
+"\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:943
+#: vbht:944
 msgid "\\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:949
-msgid "vbht 0.3\\nCopyright (C) 2012 Mariano Perez Rodriguez\\nLicense AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.\\nThis is free software: you are free to change and redistribute it.\\nThere is NO WARRANTY, to the extent permitted by law.\\n\\nWritten by Mariano Perez Rodriguez.\\nReport vbht bugs to: <mariano.perez.rodriguez@gmail.com>\\n"
+#: vbht:950
+msgid ""
+"vbht 0.3\n"
+"Copyright (C) 2012 Mariano Perez Rodriguez\n"
+"License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.\n"
+"This is free software: you are free to change and redistribute it.\n"
+"There is NO WARRANTY, to the extent permitted by law.\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:960
+#: vbht:961
 msgid "\\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:968
+#: vbht:969
 msgid "\\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:977 vbht:1023 vbht:1056
+#: vbht:978 vbht:1024 vbht:1057
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:1008 vbht:1041 vbht:1083 vbht:1134 vbht:1174
+#: vbht:1009 vbht:1042 vbht:1084 vbht:1135 vbht:1175
 msgid "invalid option at \\`%s'! -- \\`%s'"
 msgstr ""
 
-#: vbht:1013 vbht:1046 vbht:1088 vbht:1179
+#: vbht:1014 vbht:1047 vbht:1089 vbht:1180
 msgid "invalid option! -- \\`%s'"
 msgstr ""
 
-#: vbht:1061
+#: vbht:1062
 msgid "additional arguments ignored! -- \\`%s'"
 msgstr ""
 
-#: vbht:1185
+#: vbht:1186
 msgid "invalid action! -- \\`%s'"
 msgstr ""
 
-#: vbht:1190
+#: vbht:1191
 msgid "Try \\`%s --help' for more information.\\n"
 msgstr ""
 
-#: vbht:1226
+#: vbht:1227
 msgid "invalid virtual machine specification! -- \\`%s'"
 msgstr ""
 
-#: vbht:1231
+#: vbht:1232
 msgid "another process is holding the lock with PID %s!"
 msgstr ""
 
-#: vbht:1237
+#: vbht:1238
 msgid "setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!"
 msgstr ""
 
-#: vbht:1259
+#: vbht:1260
 msgid "disabling input devices (%s) failed, keyboards will NOT be attached!"
 msgstr ""
 
-#: vbht:1281
+#: vbht:1282
 msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
 msgstr ""
 
-#: vbht:1291
+#: vbht:1292
 msgid "keyboard attachment failed for at least one device!"
 msgstr ""
 
-#: vbht:1299 vbht:1361
+#: vbht:1300 vbht:1362
 msgid "invalid devpath! -- \\`%s'"
 msgstr ""
 
-#: vbht:1303 vbht:1365
+#: vbht:1304 vbht:1366
 msgid "attaching devpath \\`%s' at address \\`%s' returned non-zero (%d) status!"
 msgstr ""
 
-#: vbht:1315
+#: vbht:1316
 msgid "re-enabling input devices failed, trying to re-enable them all!"
 msgstr ""
 
-#: vbht:1316
+#: vbht:1317
 msgid "re-enabling all input devices failed!"
 msgstr ""
 
-#: vbht:1325
+#: vbht:1326
 msgid "restoring ignored warnings returned non-zero (%d) status! -- \\`%s'"
 msgstr ""
 
-#: vbht:1343 vbht:1507
+#: vbht:1344 vbht:1508
 msgid "no capturing virtual machine running!"
 msgstr ""
 
-#: vbht:1346
+#: vbht:1347
 msgid "the capturing virtual machine does not accept attachments!"
 msgstr ""
 
-#: vbht:1349 vbht:1510
+#: vbht:1350 vbht:1511
 msgid "you're neither the capturing virtual machine's owner, nor root!"
 msgstr ""
 
-#: vbht:1421
+#: vbht:1422
 msgid "No vbht-managed virtual machine running!"
 msgstr ""
 
-#: vbht:1427
+#: vbht:1428
 msgid "Capturing virtual machine's launcher PID: [%s]"
 msgstr ""
 
-#: vbht:1428
+#: vbht:1429
 msgid "Capturing virtual machine's launcher UID: [%s]"
 msgstr ""
 
-#: vbht:1429
+#: vbht:1430
 msgid "Capturing virtual machine's UUID        : [%s]"
 msgstr ""
 
-#: vbht:1430
+#: vbht:1431
 msgid "Capturing virtual machine's RUNHASH     : [%s]"
 msgstr ""
 
-#: vbht:1432
+#: vbht:1433
 msgid "Auto-attachment    : [%s]"
 msgstr ""
 
-#: vbht:1433
+#: vbht:1434
 msgid "Keyboard attachment: [%s]"
 msgstr ""
 
-#: vbht:1434
+#: vbht:1435
 msgid "ACPI forwarding    : [%s]"
 msgstr ""
 
-#: vbht:1435
+#: vbht:1436
 msgid "Print-listener     : [%s]"
 msgstr ""
 
-#: vbht:1436
+#: vbht:1437
 msgid "Dedicated X server : [%s]"
 msgstr ""
 
-#: vbht:1522
+#: vbht:1523
 msgid "invalid stoppage type! -- \\`%s'"
 msgstr ""
 
-#: vbht:1530
+#: vbht:1529
 msgid "stoppage returned non-zero (%d) status!"
 msgstr ""
 
-#: vbht:1541
+#: vbht:1540
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
