@@ -229,7 +229,7 @@ getWarns() {
 setWarns() {
   # turn the comma-separated list into a newline-separated list, remove empty
   # lines, sort it, and turn it back into a comma-separated list
-	  local -r temp="$(tr ',[:space:]' $'\n' <<< "${*}" | grep . | sort -u | tr $'\n' ',')"
+    local -r temp="$(tr ',[:space:]' $'\n' <<< "${*}" | grep . | sort -u | tr $'\n' ',')"
   # set them
   vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> "${ERRPIPE}"
 }
@@ -370,10 +370,10 @@ enableKbdsMice() {
 # Usage: debugTrap BASH_COMMAND FUNCNAME LINENO
 # Returns: 0, always
 # Outputs: nothing
-# Depends: DO_TRAP_LOGGING, log()
+# Depends: DO_TRAP_LOGGING, logDebug()
 debugTrap() {
   if [[ "${DO_TRAP_LOGGING:-N}" != 'N' && "${2}" != 'log' && "${2}" != 'errListener' && "${2}" != 'exitTrap' ]]; then
-    log ${SEV_DEBUG} $"Running \`%s' at \`%s:%s'" "${1}" "${2:-main}" "${3}"
+    logDebug $"Running \`%s' at \`%s:%s'" "${1}" "${2:-main}" "${3}"
   fi
 }
 
@@ -443,6 +443,29 @@ log() {
   echo "[${RUNHASH}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}] ${std_log}" >> "${LOGFILE}"
 }
 
+# Call log() with the appropriate severity
+#
+# Usage: logFatal     FORMAT [PARAMS...]
+#        logError     FORMAT [PARAMS...]
+#        logWarning   FORMAT [PARAMS...]
+#        logInfo      FORMAT [PARAMS...]
+#        logDebug     FORMAT [PARAMS...]
+#        logStderr    FORMAT [PARAMS...]
+#        logOtherVerb FORMAT [PARAMS...]
+#        logOtherSlnt FORMAT [PARAMS...]
+# Returns: 0, always
+# Outputs: depending on settings, it may output STRING... to stderr
+# Depends: LOGFILE, SEV_FATAL, SEV_ERROR, SEV_WARNING, SEV_INFO, SEV_DEBUG,
+#          SEV_STDERR, log()
+logFatal()     { log ${SEV_FATAL}      "$@" }
+logError()     { log ${SEV_ERROR}      "$@" }
+logWarning()   { log ${SEV_WARNING}    "$@" }
+logInfo()      { log ${SEV_INFO}       "$@" }
+logDebug()     { log ${SEV_DEBUG}      "$@" }
+logStderr()    { log ${SEV_STDERR}     "$@" }
+logOtherVerb() { log ${SEV_OTHER_VERB} "$@" }
+logOtherSlnt() { log ${SEV_OTHER_SLNT} "$@" }
+
 # ------------------------------------------------------------------------------
 # -- Duplex functions ----------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -454,7 +477,7 @@ log() {
 # Usage errListener [&]
 # Returns: 0, always
 # Outputs: nothing
-# Depends: log(), ERRPIPE, SEV_STDERR, LOGFILE
+# Depends: logStderr(), ERRPIPE
 errListener() {
   # set up temporary
   local line=''
@@ -462,7 +485,7 @@ errListener() {
   while IFS= read -r line; do
     # if it's not blank, log it with SEV_STDERR
     # IMPORTANT: REPLACE '%' WITH '%%' IN ORDER FOR PRINTF NOT TO CHOKE
-    if [[ "${line}" ]]; then log ${SEV_STDERR} "${line//%/%%}"; fi
+    if [[ "${line}" ]]; then logStderr "${line//%/%%}"; fi
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
   done <> "${ERRPIPE}"
 }
@@ -481,7 +504,7 @@ errListener() {
 #          listening for files to print, no time to return at all); thus the
 #          preferred background terminator in "Usage"
 # Outputs: nothing
-# Depends: log(), PRINTDIR, SEV_STDERR, LOGFILE, ERRPIPE
+# Depends: logError(), PRINTDIR
 #
 # Taken from: https://github.com/rvoicilas/inotify-tools/issues/5#issuecomment-17756009
 printListener() {
@@ -498,7 +521,7 @@ printListener() {
       # when done (if there are errors, log them)
       (
         if ! lpr -hr "${PRINTDIR}/${file}"; then
-          log ${SEV_ERROR} $"lpr returned non-zero (%d) status" $?
+          logError $"lpr returned non-zero (%d) status" $?
         else
           rm -f -- "${PRINTDIR}/${file}"
         fi
@@ -783,10 +806,10 @@ declare -ru DO_TRAP_LOGGING='Y'
 # == Arguments check ===========================================================
 # ==============================================================================
 
-log ${SEV_DEBUG} $"VBHT started"
+logDebug $"VBHT started"
 
 # we must have at least one argument
-if (( $# == 0 )); then log ${SEV_ERROR} $"no arguments provided!"; errors='X'
+if (( $# == 0 )); then logError $"no arguments provided!"; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
@@ -943,7 +966,7 @@ Written by Mariano Perez Rodriguez.
 Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 "
     # just be obnoxious about `--help' not being the only argument given :P
-    if (( $# != 1 )); then log ${SEV_WARNING} $"\`--help' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
     exit 0
   fi
 
@@ -960,7 +983,7 @@ Written by Mariano Perez Rodriguez.
 Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 "
     # just be obnoxious about `--version' not being the only argument given :P
-    if (( $# != 1 )); then log ${SEV_WARNING} $"\`--version' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then logWarning $"\`--version' is supposed to be the ONLY argument given!"; fi
     exit 0
   fi
 
@@ -968,7 +991,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
   if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
     /usr/bin/env pager /opt/vbht/agplv3
     # just be obnoxious about `--license' not being the only argument given :P
-    if (( $# != 1 )); then log ${SEV_WARNING} $"\`--license' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then logWarning $"\`--license' is supposed to be the ONLY argument given!"; fi
     exit 0
   fi
 
@@ -977,7 +1000,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
     'start')
       action='S'
       # check for too few arguments
-      if (( $# == 1 )); then log ${SEV_ERROR} $"too few arguments!"; errors='X'
+      if (( $# == 1 )); then logError $"too few arguments!"; errors='X'
       else
         # save the argument
         vmUUID="${2}"
@@ -1008,12 +1031,12 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                   # invalid option
-                  *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                  *) logError $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
                 esac
               done
             ;;
             # invalid option
-            *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+            *) logError $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
           esac
           # shift the processed parameter out
           shift 1
@@ -1023,7 +1046,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
     'attach')
       action='A'
       # check for too few arguments
-      if (( $# == 1 )); then log ${SEV_ERROR} $"too few arguments!"; errors='X'
+      if (( $# == 1 )); then logError $"too few arguments!"; errors='X'
       else
         # get optional arguments
         shift 1
@@ -1041,12 +1064,12 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                   # invalid option
-                  *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                  *) logError $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
                 esac
               done
             ;;
             # invalid option
-            *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+            *) logError $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
           esac
           # shift the processed parameter out
           shift 1
@@ -1056,12 +1079,12 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
     'forward')
       action='F'
       # check for too few arguments
-      if (( $# == 1 )); then log ${SEV_ERROR} $"too few arguments!"; errors='X'
+      if (( $# == 1 )); then logError $"too few arguments!"; errors='X'
       else
         # save the argument
         acpiEvent="${2}"
         # yell about too many arguments
-        if (( $# != 2 )); then log ${SEV_WARNING} $"additional arguments ignored! -- \`%s'" "${*:3}"; fi
+        if (( $# != 2 )); then logWarning $"additional arguments ignored! -- \`%s'" "${*:3}"; fi
       fi
     ;;
     'info')
@@ -1083,12 +1106,12 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                 # invalid option
-                *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                *) logError $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
               esac
             done
           ;;
           # invalid option
-          *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+          *) logError $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
         esac
         # shift the processed parameter out
         shift 1
@@ -1134,7 +1157,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                     break
                   else
                     # otherwise, this is just an error
-                    log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X'
+                    logError $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X'
                   fi
                 ;;
               esac
@@ -1174,18 +1197,18 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                 # invalid option
-                *) log ${SEV_ERROR} $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
+                *) logError $"invalid option at \`%s'! -- \`%s'" "${1}" "${1:$i:1}"; errors='X' ;;
               esac
             done
           ;;
           # invalid option
-          *) log ${SEV_ERROR} $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
+          *) logError $"invalid option! -- \`%s'" "${1}"; errors='X' ;;
         esac
         # shift the processed parameter out
         shift 1
       done
     ;;
-    *) log ${SEV_ERROR} $"invalid action! -- \`%s'" "${1}"; errors='X' ;;
+    *) logError $"invalid action! -- \`%s'" "${1}"; errors='X' ;;
   esac
 fi
 
@@ -1226,18 +1249,18 @@ if [[ "${action}" == 'S' ]]; then
   # we're going to check for emptiness of "vmUUID")
   temp="${vmUUID}"; vmUUID=$(getUUID ${vmUUID}) ||:
   # fail if not a valid virtual machine specification
-  if ! [[ "${vmUUID}" ]]; then log ${SEV_ERROR} $"invalid virtual machine specification! -- \`%s'" "${temp}"; errors='X'
+  if ! [[ "${vmUUID}" ]]; then logError $"invalid virtual machine specification! -- \`%s'" "${temp}"; errors='X'
   else
     # try to get lock (mask errors, we're going to check the output)
     lockingPID="$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}")" ||:
     # if there's another process using the lock, fail
-    if (( lockingPID )); then log ${SEV_ERROR} $"another process is holding the lock with PID %s!" "${lockingPID}"; errors='X'
+    if (( lockingPID )); then logError $"another process is holding the lock with PID %s!" "${lockingPID}"; errors='X'
     else
       # save VirtualBox(R)'s ignored warnings
       warns="$(getWarns)"
       # try to set ignored warnings, and fail if we couldn't
       if ! setWarns "${IGNOREWARNINGS}"; then
-        log ${SEV_ERROR} $"setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!" $?; errors='X'
+        logError $"setting ignored warnings returned non-zero (%d) status, keyboard attachment disabled!" $?; errors='X'
         # if warnings could not be disabled, disable keyboard attachment
         attach_keyboard='E'
         # tell the lockfile about it
@@ -1259,7 +1282,7 @@ if [[ "${action}" == 'S' ]]; then
         ret=0; indevs="$(disableKbdsMice)" || ret=$?
         if (( ret )); then
           # if disabling failed, yell
-          log ${SEV_ERROR} $"disabling input devices (%s) failed, keyboards will NOT be attached!" "${indevs}"; errors='X'
+          logError $"disabling input devices (%s) failed, keyboards will NOT be attached!" "${indevs}"; errors='X'
           attach_keyboard='E'
           # tell the lockfile about it
           addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
@@ -1281,7 +1304,7 @@ if [[ "${action}" == 'S' ]]; then
 
       # wait for the VM to become available, recover if it timed out
       if ! waitRunning "${vmUUID}"; then
-        log ${SEV_WARNING} $"could not wait for virtual machine to start up, keyboard attachment will NOT be available!"; errors='X'
+        logWarning $"could not wait for virtual machine to start up, keyboard attachment will NOT be available!"; errors='X'
         # disable keyboard attachment
         attach_keyboard='E'
         # tell the lockfile about it
@@ -1291,7 +1314,7 @@ if [[ "${action}" == 'S' ]]; then
       # machine is in "running" state, attach keyboards if need be
       if [[ "${attach_keyboard}" == 'Y' ]]; then
         # try to attach every keyboard, and, if there were errors, just yell, not much we can do now
-        if ! attachKbds "${vmUUID}"; then log ${SEV_ERROR} $"keyboard attachment failed for at least one device!"; errors='X'; fi
+        if ! attachKbds "${vmUUID}"; then logError $"keyboard attachment failed for at least one device!"; errors='X'; fi
       fi
 
       # if there are devpaths to attach, do that now
@@ -1299,11 +1322,11 @@ if [[ "${action}" == 'S' ]]; then
         # get an address from the devpath (mask errors)
         address="$(devpath2address "${1}")" ||:
         # show error if not a valid DEVPATH
-        if ! [[ "${address}" ]]; then log ${SEV_ERROR} $"invalid devpath! -- \`%s'" "${1}"; errors='X'
+        if ! [[ "${address}" ]]; then logError $"invalid devpath! -- \`%s'" "${1}"; errors='X'
         else
           # try to attach device line and report non-zero status
           if ! vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> "${ERRPIPE}"; then
-            log ${SEV_WARNING} $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X'
+            logWarning $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X'
           fi
         fi
         # shift the processed parameter out
@@ -1315,8 +1338,8 @@ if [[ "${action}" == 'S' ]]; then
         # try to re-enable input devices
         if ! enableKbdsMice "${indevs}" &> "${ERRPIPE}"; then
           # if re-enabling failed, yell and try to re-enable all of them
-          log ${SEV_ERROR} $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
-          if ! enableKbdsMice &> "${ERRPIPE}"; then log ${SEV_ERROR} $"re-enabling all input devices failed!"; errors='X'; fi
+          logError $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
+          if ! enableKbdsMice &> "${ERRPIPE}"; then logError $"re-enabling all input devices failed!"; errors='X'; fi
         fi
       fi
 
@@ -1325,7 +1348,7 @@ if [[ "${action}" == 'S' ]]; then
 
       # try to restore ignored warnings, if the command failed, at least
       # let the user know which were the original warnings
-      if ! setWarns "${warns}"; then log ${SEV_WARNING} $"restoring ignored warnings returned non-zero (%d) status! -- \`%s'" $? "${warns}"; errors='X'; fi
+      if ! setWarns "${warns}"; then logWarning $"restoring ignored warnings returned non-zero (%d) status! -- \`%s'" $? "${warns}"; errors='X'; fi
 
       # free lock file
       rm -f -- "${LOCKFILE}"
@@ -1343,13 +1366,13 @@ elif [[ "${action}" == 'A' ]]; then
 
   # try to read the lock file's line
   if ! readLock _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
-    log ${SEV_ERROR} $"no capturing virtual machine running!"; errors='X'
+    logError $"no capturing virtual machine running!"; errors='X'
   else
     # if the machine doesn't accept attachments, fail
-    if [[ "${auto_attach}" != 'Y' ]]; then log ${SEV_ERROR} $"the capturing virtual machine does not accept attachments!"; errors='X'
+    if [[ "${auto_attach}" != 'Y' ]]; then logError $"the capturing virtual machine does not accept attachments!"; errors='X'
     else
       # check if the user may attach to the capturing virtual machine
-      if (( ( UID != vmUID ) && UID )); then log ${SEV_ERROR} $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+      if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
       else
         # start building "attach" line
         line="vboxmanage controlvm '${vmUUID}' usbattach"
@@ -1361,11 +1384,11 @@ elif [[ "${action}" == 'A' ]]; then
           # get an address from the DEVPATH (mask errors)
           address="$(devpath2address "${1}")" ||:
           # show error if not a valid DEVPATH
-          if ! [[ "${address}" ]]; then log ${SEV_ERROR} $"invalid devpath! -- \`%s'" "${1}"; errors='X'
+          if ! [[ "${address}" ]]; then logError $"invalid devpath! -- \`%s'" "${1}"; errors='X'
           else
             # evaluate attach line and report non-zero status
             if ! eval -- "${line} '${address}' 2> ${ERRPIPE}"; then
-              log ${SEV_WARNING} $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X';
+              logWarning $"attaching devpath \`%s' at address \`%s' returned non-zero (%d) status!" "${1}" "${address}" $?; errors='X';
             fi
           fi
           # shift the processed parameter out
@@ -1507,10 +1530,10 @@ elif [[ "${action}" == 'X' ]]; then
   #
 
   # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ _ _ _; then log ${SEV_ERROR} $"no capturing virtual machine running!"; errors='X'
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ _ _ _; then logError $"no capturing virtual machine running!"; errors='X'
   else
     # check if the user may stop the capturing virtual machine
-    if (( ( UID != vmUID ) && UID )); then log ${SEV_ERROR} $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+    if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
     else
       # start building "stop" line
       line="vboxmanage controlvm '${vmUUID}'"
@@ -1522,13 +1545,13 @@ elif [[ "${action}" == 'X' ]]; then
         'S') line="${line} savestate"       ;;
         'L') line="${line} acpisleepbutton" ;;
         #
-        *) log ${SEV_ERROR} $"invalid stoppage type! -- \`%s'" "${stop_method}"; errors='X' ;;
+        *) logError $"invalid stoppage type! -- \`%s'" "${stop_method}"; errors='X' ;;
       esac
       # prepend "sudo" prefix
       if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
 
       # evaluate stop line and report non-zero status
-      if ! eval -- "${line} 2> ${ERRPIPE}"; then log ${SEV_WARNING} $"stoppage returned non-zero (%d) status!" $?; fi
+      if ! eval -- "${line} 2> ${ERRPIPE}"; then logWarning $"stoppage returned non-zero (%d) status!" $?; fi
     fi
   fi
 fi
