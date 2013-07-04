@@ -57,6 +57,10 @@ DONE:
 
 TODO:
 
+- hacer que start y attach se banquen shared folders (por ahi, en lugar de attach hara falta otra action que agregue shared folders)
+
+- ver si se puede consolidar forward con stop (hoy por hoy, stop --sleep, por ejemplo, no se fija si se estan forwardeando eventos, mientras que forward si, esta es la unica diferencia, pero esto se puede agregar al esquema consolidado agregando una opcion "--force" para evitar chequear el forwarding)
+
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
