@@ -40,6 +40,60 @@ TEXTDOMAIN=vbht
 
 
 # ==============================================================================
+# == Basic utilities ===========================================================
+# ==============================================================================
+
+# Key-based printf-like function
+#
+# Usage print FORMAT [KEY:VALUE...]
+# Returns: 0, always
+# Outputs: string FORMAT, where every occurrence of `:KEY' has been replaced
+#          by `VALUE' (incidentally, every occurrence of `:.' will be replaced
+#          by `:' in order to provide for escaping)
+# Depends: nothing
+print() {
+  # reps will hold the replacements to be done
+  local -A reps
+  # temporary
+  local key
+  # keys must conform to this regex
+  local re='^[a-zA-Z0-9]+$'
+  # initialise output with format and shift it out
+  local out="${1}"; shift
+
+  # as long as we have `KEY:VALUE' pairs to process
+  while (( $# )); do
+    # keep everything up to the first `:'
+    key=${1%%:*}
+    # verify the key conforms to the regex
+    if [[ "${key}" =~ $re ]]; then
+      # take everything from the first `:' on, and replace in it every
+      # `:' by `:.'m thus quoting it.
+      reps[${key}]=${1#*:}
+      reps[${key}]=${reps[${key}]//:/:.}
+    fi
+    # go get the next parameter
+    shift
+  done
+
+  # apply each replacement in turn
+  for key in ${!reps[@]}; do
+    out="${out//:${key}/${reps[${key}]}}"
+  done
+  # unquote and return
+  printf '%b' "${out//:./:}"
+}
+
+# As print(), but always echo a newline
+#
+# Usage println FORMAT [KEY:VALUE...]
+# Returns: 0, always
+# Outputs: as print, but with an additional newline at the end
+# Depends: print()
+println() { print "$@"; echo; }
+
+
+# ==============================================================================
 # == Availability ==============================================================
 # ==============================================================================
 
@@ -59,7 +113,7 @@ declare -r NEEDEDCOMMANDS=('cat' 'cut' 'find' 'grep' 'head' 'inotifywait' 'lpr' 
 # Usage: verifyNeededCommands
 # Returns: 0 if successful, exits with error code 1 if not
 # Outputs: error messages to stderr
-# Depends: NEEDEDCOMMANDS
+# Depends: print(), NEEDEDCOMMANDS
 #
 # taken from <http://wiki.bash-hackers.org/scripting/style#behaviour_and_robustness>
 verifyNeededCommands() {
@@ -69,18 +123,18 @@ verifyNeededCommands() {
   for comm in "${NEEDEDCOMMANDS[@]}"; do
     # try to hash it (throw away output and errors)
     if ! hash "$comm" &> /dev/null; then
-      printf $"Command not found in path: \`%s'" "$comm"
-      (( missing++ ))
+      print $"Command not found in path: \`:missingCommand'\n" "missingCommand:$comm"
+      (( missing++ )) ||:
     fi
   done
   # show additional error message
   if (( missing )); then
     if (( missing == 1 )); then
-      printf $"At least one essential command was not found in path!"
+      print $"At least one essential command was not found in path!\n"
     elif (( missing > 1 )); then
-      printf $"At least %d essential commands were not found in path!" "$missing"
+      print $"At least :missingAmmount essential commands were not found in path!\n" "missingAmmount:$missing"
     fi
-    printf $"Aborting!"
+    print $"Aborting!\n"
     exit 1
   fi
 }
@@ -405,15 +459,15 @@ exitTrap() {
 # Write to the logfile and, optionally, to stderr
 # Write the provided arguments to the LOGFILE, assuming a given SEVERITY
 # and, depending on the value of "verbosity", output STRING... to stderr
-# using a `BASH-printf'-life format.
+# using a `print'-life format.
 #
 # Usage: log SEVERITY FORMAT [PARAMS...]
 # Returns: 0, always
 # Outputs: depending on settings, it may output STRING... to stderr
-# Depends: verbosity, LOGFILE, SEV_FATAL, SEV_ERROR, SEV_WARNING, SEV_INFO,
-#          SEV_DEBUG, SEV_STDERR, START_FATAL, STOP_FATAL, START_ERROR,
-#          STOP_ERROR, START_WARNING, STOP_WARNING, START_INFO,
-#          STOP_INFO, START_DEBUG, STOP_DEBUG, START_STDERR,
+# Depends: print(), verbosity, LOGFILE, SEV_FATAL, SEV_ERROR, SEV_WARNING,
+#          SEV_INFO, SEV_DEBUG, SEV_STDERR, START_FATAL, STOP_FATAL,
+#          START_ERROR, STOP_ERROR, START_WARNING, STOP_WARNING,
+#          START_INFO, STOP_INFO, START_DEBUG, STOP_DEBUG, START_STDERR,
 #          STOP_STDERR, prevRUNHASH, RUNHASH, ERRPIPE
 log() {
   # get severity (declare severity "name" too)
@@ -433,9 +487,9 @@ log() {
   elif (( severity == SEV_STDERR  )); then sev_name='S'; std_err="${START_STDERR}"$"Stderr"":${STOP_STDERR}"   ; std_log=$"Stderr"':'
   else                                     sev_name='O'
   fi
-  # fill stderr and stdlog temporaries up with printf output
-  std_err="${std_err} $(printf "${2}" "${@:3}" 2> "${ERRPIPE}")"
-  std_log="${std_log} $(printf "${2}" "${@:3}" 2> "${ERRPIPE}")"
+  # fill stderr and stdlog temporaries up with print output
+  std_err="${std_err} $(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
+  std_log="${std_log} $(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
 
   # if verbosity mandates, show to stderr
   if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
@@ -484,8 +538,8 @@ errListener() {
   # while there's a (raw) line to be read
   while IFS= read -r line; do
     # if it's not blank, log it with SEV_STDERR
-    # IMPORTANT: REPLACE '%' WITH '%%' IN ORDER FOR PRINTF NOT TO CHOKE
-    if [[ "${line}" ]]; then logStderr "${line//%/%%}"; fi
+    # IMPORTANT: REPLACE '%' WITH '%%' IN ORDER FOR PRINT NOT TO CHOKE
+    if [[ "${line}" ]]; then logStderr "${line//:/:.}"; fi
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
   done <> "${ERRPIPE}"
 }
@@ -533,57 +587,6 @@ printListener() {
   # use RW redirection to avoid blocking on open (http://stackoverflow.com/a/6448737)
   done <> "${PRNPIPE}"
 }
-
-# ------------------------------------------------------------------------------
-
-# Key-based printf-like function
-#
-# Usage print FORMAT [KEY:VALUE...]
-# Returns: 0, always
-# Outputs: string FORMAT, where every occurrence of `:KEY' has been replaced
-#          by `VALUE' (incidentally, every occurrence of `:.' will be replaced
-#          by `:' in order to provide for escaping)
-# Depends: nothing
-print() {
-  # reps will hold the replacements to be done
-  local -A reps
-  # temporary
-  local key
-  # keys must conform to this regex
-  local re='^[a-zA-Z0-9]+$'
-  # initialise output with format and shift it out
-  local out="${1}"; shift
-
-  # as long as we have `KEY:VALUE' pairs to process
-  while (( $# )); do
-    # keep everything up to the first `:'
-    key=${1%%:*}
-    # verify the key conforms to the regex
-    if [[ "${key}" =~ $re ]]; then
-      # take everything from the first `:' on, and replace in it every
-      # `:' by `:.'m thus quoting it.
-      reps[${key}]=${1#*:}
-      reps[${key}]=${reps[${key}]//:/:.}
-    fi
-    # go get the next parameter
-    shift
-  done
-
-  # apply each replacement in turn
-  for key in ${!reps[@]}; do
-    out="${out//:${key}/${reps[${key}]}}"
-  done
-  # unquote and return
-  printf '%s' "${out//:./:}"
-}
-
-# As print(), but always echo a newline
-#
-# Usage println FORMAT [KEY:VALUE...]
-# Returns: 0, always
-# Outputs: as print, but with an additional newline at the end
-# Depends: print()
-println() { print "$@"; echo; }
 
 
 # ==============================================================================
@@ -864,7 +867,7 @@ if (( $# == 0 )); then logError $"no arguments provided!"; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
-    printf $"\
+    print $"\
 Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
                [ --auto-attach ]    [ --no-auto-attach ]
                [ --kbd-attach ]     [ --no-kbd-attach ]
@@ -1023,7 +1026,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 
   # check for `--version' argument
   if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
-    printf $"\
+    print $"\
 vbht 0.3
 Copyright (C) 2012 Mariano Perez Rodriguez
 License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
@@ -1264,7 +1267,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 fi
 
 # in case of errors, show info and exit
-if [[ "${errors}" ]]; then printf $"Try \`%s --help' for more information.\n" "${0##*/}" >&2; exit 1; fi
+if [[ "${errors}" ]]; then print $"Try \`:vbhtName --help' for more information."$'\n' "vbhtName:${0##*/}" >&2; exit 1; fi
 
 # fix up verbosity
 if (( verbosity > MAX_VERB )); then (( verbosity = ${MAX_VERB} )); fi
@@ -1501,16 +1504,16 @@ elif [[ "${action}" == 'I' ]]; then
       echo "${vmPID}:${vmUID}:${vmUUID}:${prevRUNHASH}:${auto_attach}:${attach_keyboard}:${acpi_forward}:${launch_print_listener}:${use_new_X}"
     else
       # write formatted output to stdout
-      printf $"Capturing virtual machine's launcher PID: [%s]""\n" "${vmPID}"
-      printf $"Capturing virtual machine's launcher UID: [%s]""\n" "${vmUID}"
-      printf $"Capturing virtual machine's UUID        : [%s]""\n" "${vmUUID}"
-      printf $"Capturing virtual machine's RUNHASH     : [%s]""\n" "${prevRUNHASH}"
+      print $"Capturing virtual machine's launcher PID: [:vmPID]"$'\n'   "vmPID:${vmPID}"
+      print $"Capturing virtual machine's launcher UID: [:vmUID]"$'\n'   "vmUID:${vmUID}"
+      print $"Capturing virtual machine's UUID        : [:vmUUID]"$'\n'  "vmUUID:${vmUUID}"
+      print $"Capturing virtual machine's RUNHASH     : [:runhash]"$'\n' "runhash:${prevRUNHASH}"
       echo
-      printf $"Auto-attachment    : [%s]""\n" "${auto_attach}"
-      printf $"Keyboard attachment: [%s]""\n" "${attach_keyboard}"
-      printf $"ACPI forwarding    : [%s]""\n" "${acpi_forward}"
-      printf $"Print-listener     : [%s]""\n" "${launch_print_listener}"
-      printf $"Dedicated X server : [%s]""\n" "${use_new_X}"
+      print $"Auto-attachment    : [:autoAttach]"$'\n'          "autoAttach:${auto_attach}"
+      print $"Keyboard attachment: [:attachKeyboard]"$'\n'      "attachKeyboard:${attach_keyboard}"
+      print $"ACPI forwarding    : [:acpiForward]"$'\n'         "acpiForward:${acpi_forward}"
+      print $"Print-listener     : [:launchPrintListener]"$'\n' "launchPrintListener:${launch_print_listener}"
+      print $"Dedicated X server : [:useNewX]"$'\n'             "useNewX:${use_new_X}"
     fi
   fi
 
