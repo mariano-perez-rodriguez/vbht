@@ -95,6 +95,13 @@ println() { print "$@"; echo; }
 # == Availability ==============================================================
 # ==============================================================================
 
+# verify needed bash version
+if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2) )); then
+  println $"At least bash version 4.2 is needed in order to run this script -- the detected version is \`:major.:minor'" "major:${BASH_VERSINFO[0]}" "minor:${BASH_VERSINFO[1]}"
+  println $"Aborting!"
+  exit 1
+fi
+
 # ------------------------------------------------------------------------------
 # -- Needed commands -----------------------------------------------------------
 # ------------------------------------------------------------------------------
