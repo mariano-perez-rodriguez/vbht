@@ -1,8 +1,24 @@
-#: openx:108
+#: openx:124
+msgid "Command not found in path: \\`:missingCommand'"
+msgstr ""
+
+#: openx:131
+msgid "At least one essential command was not found in path!"
+msgstr ""
+
+#: openx:133
+msgid "At least :missingAmmount essential commands were not found in path!"
+msgstr ""
+
+#: openx:135
+msgid "Aborting!"
+msgstr ""
+
+#: openx:214
 msgid "Error: no arguments provided!"
 msgstr ""
 
-#: openx:112
+#: openx:218
 msgid ""
 "Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]\n"
 "           COMMAND [ARGUMENT...]\n"
@@ -14,7 +30,7 @@ msgid ""
 "it and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.\n"
 "\n"
 "      -d, --dump   dump the display number of the newly created X instance\n"
-"                   before running COMMAND, eg. \\`:1234567890'\n"
+"                   before running COMMAND, eg. \\`:.1234567890'\n"
 "      -s, --sim    simulate but don't run: output the line to be executed\n"
 "      -n, --noptr  hide the mouse pointer for the newly created X server root\n"
 "\n"
@@ -26,10 +42,10 @@ msgid ""
 "\n"
 "    > sudo openx -s xclock -digital -utime\n"
 "    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\\\ \n"
-"      -- :1234567890\n"
+"      -- :.1234567890\n"
 "\n"
 "    > sudo openx -d xclock -digital -utime\n"
-"    :1234567890\n"
+"    :.1234567890\n"
 "\n"
 "Exit status:\n"
 "   0  if OK,\n"
@@ -55,11 +71,11 @@ msgid ""
 "Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: openx:164
+#: openx:270
 msgid "Warning: \\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:170
+#: openx:276
 msgid ""
 "openx 0.4\n"
 "Copyright (C) 2012 Mariano Perez Rodriguez\n"
@@ -71,46 +87,46 @@ msgid ""
 "Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: openx:181
+#: openx:287
 msgid "Warning: \\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:189
+#: openx:295
 msgid "Warning: \\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:211
-msgid "Error: the argument \\`%s' does not denote a known command!"
+#: openx:317
+msgid "Error: the argument \\`:argument' does not denote a known command!"
 msgstr ""
 
-#: openx:219
+#: openx:325
 msgid "Error: no lone \\`--' tokens allowed!"
 msgstr ""
 
-#: openx:223 openx:280
-msgid "Try \\`%s --help' for more information."
+#: openx:329 openx:386
+msgid "Try \\`:openxName --help' for more information."
 msgstr ""
 
-#: openx:260
+#: openx:366
 msgid "Error: cannot determine the current user's id!"
 msgstr ""
 
-#: openx:261
+#: openx:367
 msgid "Error: cannot determine the previous user's id!"
 msgstr ""
 
-#: openx:272
+#: openx:378
 msgid "Error: chaining is not allowed!"
 msgstr ""
 
-#: openx:273
+#: openx:379
 msgid "Error: root can't do this!"
 msgstr ""
 
-#: openx:275
+#: openx:381
 msgid "Error: you are not root!"
 msgstr ""
 
-#: openx:327
-msgid "Warning: openvt returned non-zero (%d) status!"
+#: openx:433
+msgid "Warning: openvt returned non-zero (:status) status!"
 msgstr ""
