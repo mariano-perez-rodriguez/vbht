@@ -534,6 +534,57 @@ printListener() {
   done <> "${PRNPIPE}"
 }
 
+# ------------------------------------------------------------------------------
+
+# Key-based printf-like function
+#
+# Usage print FORMAT [KEY:VALUE...]
+# Returns: 0, always
+# Outputs: string FORMAT, where every occurrence of `:KEY' has been replaced
+#          by `VALUE' (incidentally, every occurrence of `:.' will be replaced
+#          by `:' in order to provide for escaping)
+# Depends: nothing
+print() {
+  # reps will hold the replacements to be done
+  local -A reps
+  # temporary
+  local key
+  # keys must conform to this regex
+  local re='^[a-zA-Z0-9]+$'
+  # initialise output with format and shift it out
+  local out="${1}"; shift
+
+  # as long as we have `KEY:VALUE' pairs to process
+  while (( $# )); do
+    # keep everything up to the first `:'
+    key=${1%%:*}
+    # verify the key conforms to the regex
+    if [[ "${key}" =~ $re ]]; then
+      # take everything from the first `:' on, and replace in it every
+      # `:' by `:.'m thus quoting it.
+      reps[${key}]=${1#*:}
+      reps[${key}]=${reps[${key}]//:/:.}
+    fi
+    # go get the next parameter
+    shift
+  done
+
+  # apply each replacement in turn
+  for key in ${!reps[@]}; do
+    out="${out//:${key}/${reps[${key}]}}"
+  done
+  # unquote and return
+  printf '%s' "${out//:./:}"
+}
+
+# As print(), but always echo a newline
+#
+# Usage println FORMAT [KEY:VALUE...]
+# Returns: 0, always
+# Outputs: as print, but with an additional newline at the end
+# Depends: print()
+println() { print "$@"; echo; }
+
 
 # ==============================================================================
 # == Constants =================================================================
