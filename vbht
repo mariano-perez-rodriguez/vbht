@@ -568,7 +568,7 @@ printListener() {
   # while there's a (raw) line to be read
   while IFS= read -r file; do
     # verify we actually have a (readable) file
-    if ! [[ -r "${PRINTDIR}/${file}" && "${launch_print_listener:-}" == 'Y' ]]; then continue; fi
+    if ! [[ -r "${PRINTDIR}/${file}" ]]; then continue; fi
     # verify the file is actually a PDF one
     temp=${file:(-4)}; if [[ "${temp}" == '.PDF' ]]; then
       # print the recently created file without a banner and deleting it
