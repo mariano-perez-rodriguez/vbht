@@ -49,12 +49,7 @@ TODO:
 
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
 
-- OJO con los newlines en el pipe de STDERR!!! esto puede complicarnos el parseo del log mas tarde.
-  verificar que cuando venga un newline en STDERR se lo considere una linea nueva completa (que lleve su propio encabezado).
-
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
-
-- ver como hacer para verificar que la version de BASH que estamos corriendo sea lo suficientemente nueva como para correr el script.
 
 - para recargar reglas de udev (SIN inotify, con lo cual funciona con links simbolicos... asumo)
   http://reactivated.net/writing_udev_rules.html
@@ -72,8 +67,6 @@ TODO:
 
   esto hace que las "tags" del estilo ":<nombre>" se reemplacen por el valor asociado a la clave "<nombre>" en el array dado; la ultima regla (que reemplaza ":_" por ":") esta para permitir que en el texto de salida aparezca algo de la forma ":<nombre>" sin que sea reemplazado.
 
-- Add: --help for every action.
-
 - Bug: VBox has problems to attach modems (i.e. Bluetooth).
 
-- Bug: VBox has problems to habilitate the sleep (and hibernate) option in Windows).
+- Bug: VBox has problems to habilitate the sleep (and hibernate) option under Windows.
