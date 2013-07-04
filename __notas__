@@ -67,6 +67,4 @@ TODO:
 
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
-- Bug: VBox has problems to attach modems (i.e. Bluetooth).
-
 - Bug: VBox has problems to habilitate the sleep (and hibernate) option under Windows.
