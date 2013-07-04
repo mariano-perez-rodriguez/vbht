@@ -38,6 +38,112 @@ TEXTDOMAIN=openx
 
 
 # ==============================================================================
+# == Basic utilities ===========================================================
+# ==============================================================================
+
+# Key-based printf-like function
+#
+# Usage print FORMAT [KEY:VALUE...]
+# Returns: 0, always
+# Outputs: string FORMAT, where every occurrence of `:KEY' has been replaced
+#          by `VALUE' (incidentally, every occurrence of `:.' will be replaced
+#          by `:' in order to provide for escaping)
+# Depends: nothing
+print() {
+  # reps will hold the replacements to be done
+  local -A reps
+  # temporary
+  local key
+  # keys must conform to this regex
+  local re='^[a-zA-Z0-9]+$'
+  # initialise output with format and shift it out
+  local out="${1}"; shift
+
+  # as long as we have `KEY:VALUE' pairs to process
+  while (( $# )); do
+    # keep everything up to the first `:'
+    key=${1%%:*}
+    # verify the key conforms to the regex
+    if [[ "${key}" =~ $re ]]; then
+      # take everything from the first `:' on, and replace in it every
+      # `:' by `:.'m thus quoting it.
+      reps[${key}]=${1#*:}
+      reps[${key}]=${reps[${key}]//:/:.}
+    fi
+    # go get the next parameter
+    shift
+  done
+
+  # apply each replacement in turn
+  for key in ${!reps[@]}; do
+    out="${out//:${key}/${reps[${key}]}}"
+  done
+  # unquote and return
+  printf '%b' "${out//:./:}"
+}
+
+# As print(), but always echo a newline
+#
+# Usage println FORMAT [KEY:VALUE...]
+# Returns: 0, always
+# Outputs: as print, but with an additional newline at the end
+# Depends: print()
+println() { print "$@"; echo; }
+
+
+# ==============================================================================
+# == Availability ==============================================================
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# -- Needed commands -----------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# the needed commands
+#
+# NB: `tput' is not considered "needed" in the strictest sense: its only cosmetical
+declare -r NEEDEDCOMMANDS=('cut' 'grep' 'head' 'openvt' 'readlink' 'sudo' 'tr' 'xinit')
+
+# ------------------------------------------------------------------------------
+
+# Verify the needed commands exist
+#
+# Usage: verifyNeededCommands
+# Returns: 0 if successful, exits with error code 1 if not
+# Outputs: error messages to stderr
+# Depends: print(), NEEDEDCOMMANDS
+#
+# taken from <http://wiki.bash-hackers.org/scripting/style#behaviour_and_robustness>
+verifyNeededCommands() {
+  local -i missing=0
+  local comm=''
+  # loop through each command
+  for comm in "${NEEDEDCOMMANDS[@]}"; do
+    # try to hash it (throw away output and errors)
+    if ! hash "$comm" &> /dev/null; then
+      println $"Command not found in path: \`:missingCommand'" "missingCommand:${comm}"
+      (( missing++ )) ||:
+    fi
+  done
+  # show additional error message
+  if (( missing )); then
+    if (( missing == 1 )); then
+      println $"At least one essential command was not found in path!"
+    elif (( missing > 1 )); then
+      println $"At least :missingAmmount essential commands were not found in path!" "missingAmmount:${missing}"
+    fi
+    println $"Aborting!"
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------
+
+# verify needed commands
+verifyNeededCommands
+
+
+# ==============================================================================
 # == Constants =================================================================
 # ==============================================================================
 
@@ -109,7 +215,7 @@ if (( $# == 0 )); then echo $"Error: no arguments provided!" >&2; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
-    printf $"\
+    print $"\
 Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]
            COMMAND [ARGUMENT...]
    or: openx { -h | --help }
@@ -120,7 +226,7 @@ Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]
 it and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.
 
       -d, --dump   dump the display number of the newly created X instance
-                   before running COMMAND, eg. \`:1234567890'
+                   before running COMMAND, eg. \`:.1234567890'
       -s, --sim    simulate but don't run: output the line to be executed
       -n, --noptr  hide the mouse pointer for the newly created X server root
 
@@ -132,10 +238,10 @@ Examples (\`>' stands for the shell prompt, \`1000' for the current UID):
 
     > sudo openx -s xclock -digital -utime
     openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\ 
-      -- :1234567890
+      -- :.1234567890
 
     > sudo openx -d xclock -digital -utime
-    :1234567890
+    :.1234567890
 
 Exit status:
    0  if OK,
@@ -167,7 +273,7 @@ Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 
   # check for `--version' argument
   if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
-    printf $"\
+    print $"\
 openx 0.4
 Copyright (C) 2012 Mariano Perez Rodriguez
 License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
@@ -208,7 +314,7 @@ Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
   # prevent accidental modification
   readonly comm
   # check to see if the command exists
-  if [[ "${comm}" == '' ]]; then printf $"Error: the argument \`%s' does not denote a known command!" "${1}" >&2; errors='X'; fi
+  if [[ "${comm}" == '' ]]; then print $"Error: the argument \`:argument' does not denote a known command!" "argument:${1}" >&2; errors='X'; fi
 
   # shift arguments, we already have the command in $comm, be there errors or
   # not, they've already been reported
@@ -220,7 +326,7 @@ Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 fi
 
 # in case of errors, show info and exit
-if [[ "${errors}" ]]; then printf $"Try \`%s --help' for more information." "${0##*/}" >&2; exit 1; fi
+if [[ "${errors}" ]]; then print $"Try \`:openxName --help' for more information." "openxName:${0##*/}" >&2; exit 1; fi
 
 
 # ==============================================================================
@@ -277,7 +383,7 @@ if [[ "${errors}" == '' ]]; then
 fi
 
 # in case of errors, show info and exit
-if [[ "${errors}" ]]; then printf $"Try \`%s --help' for more information." "${0##*/}" >&2; exit 2; fi
+if [[ "${errors}" ]]; then print $"Try \`:openxName --help' for more information." "openxName:${0##*/}" >&2; exit 2; fi
 
 # no longer needed
 unset errors
@@ -324,7 +430,7 @@ else
   # prevent accidental modification
   readonly ret
   # just be obnoxious about `openvt' not having returned 0 :/
-  if (( ret )); then printf $"Warning: openvt returned non-zero (%d) status!" ${ret} >&2; fi
+  if (( ret )); then print $"Warning: openvt returned non-zero (:status) status!" "status:${ret}" >&2; fi
 fi
 
 
