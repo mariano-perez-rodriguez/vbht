@@ -22,7 +22,7 @@ set +H  # DISABLE HISTORY EXPANSION FOR CRYING OUT LOUD!!!
 
 # if there's a vbht instance running, forward the event,
 if [[ "$(/opt/vbht/vbht info -M)" ]]; then
-  exec /opt/vbht/vbht forward power > /dev/null 2> /dev/null
+  exec /opt/vbht/vbht stop --acpi &> /dev/null
 # otherwise, just call the old ACPI handler
 else
   exec /etc/acpi/pre-vbht-powerbtn.sh
