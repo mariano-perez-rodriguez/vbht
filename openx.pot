@@ -1,24 +1,28 @@
-#: openx:124
-msgid "Command not found in path: \\`:missingCommand'"
+#: openx:100
+msgid "At least bash version 4.2 is needed in order to run this script -- the detected version is \\`:major.:minor'"
 msgstr ""
 
-#: openx:131
-msgid "At least one essential command was not found in path!"
-msgstr ""
-
-#: openx:133
-msgid "At least :missingAmmount essential commands were not found in path!"
-msgstr ""
-
-#: openx:135
+#: openx:101 openx:142
 msgid "Aborting!"
 msgstr ""
 
-#: openx:214
+#: openx:131
+msgid "Command not found in path: \\`:missingCommand'"
+msgstr ""
+
+#: openx:138
+msgid "At least one essential command was not found in path!"
+msgstr ""
+
+#: openx:140
+msgid "At least :missingAmmount essential commands were not found in path!"
+msgstr ""
+
+#: openx:221
 msgid "Error: no arguments provided!"
 msgstr ""
 
-#: openx:218
+#: openx:225
 msgid ""
 "Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]\n"
 "           COMMAND [ARGUMENT...]\n"
@@ -71,11 +75,11 @@ msgid ""
 "Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: openx:270
+#: openx:277
 msgid "Warning: \\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:276
+#: openx:283
 msgid ""
 "openx 0.4\n"
 "Copyright (C) 2012 Mariano Perez Rodriguez\n"
@@ -87,46 +91,46 @@ msgid ""
 "Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: openx:287
+#: openx:294
 msgid "Warning: \\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:295
+#: openx:302
 msgid "Warning: \\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:317
+#: openx:324
 msgid "Error: the argument \\`:argument' does not denote a known command!"
 msgstr ""
 
-#: openx:325
+#: openx:332
 msgid "Error: no lone \\`--' tokens allowed!"
 msgstr ""
 
-#: openx:329 openx:386
+#: openx:336 openx:393
 msgid "Try \\`:openxName --help' for more information."
 msgstr ""
 
-#: openx:366
+#: openx:373
 msgid "Error: cannot determine the current user's id!"
 msgstr ""
 
-#: openx:367
+#: openx:374
 msgid "Error: cannot determine the previous user's id!"
 msgstr ""
 
-#: openx:378
+#: openx:385
 msgid "Error: chaining is not allowed!"
 msgstr ""
 
-#: openx:379
+#: openx:386
 msgid "Error: root can't do this!"
 msgstr ""
 
-#: openx:381
+#: openx:388
 msgid "Error: you are not root!"
 msgstr ""
 
-#: openx:433
+#: openx:440
 msgid "Warning: openvt returned non-zero (:status) status!"
 msgstr ""
