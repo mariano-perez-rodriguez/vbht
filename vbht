@@ -703,7 +703,6 @@ declare -u errors=''
 # action to be taken
 #  'S'  start
 #  'A'  attach
-#  'F'  forward
 #  'I'  info
 #  'L'  logs
 #  'X'  stop
@@ -800,8 +799,6 @@ declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-2} )) 2> /dev/null ||:
 declare -i vmUID=0
 # the UUID of the (to be) capturing VM
 declare -l vmUUID=''
-# the ACPI event to be forwarded
-declare -l acpiEvent=''
 
 # the PID of the process holding the lock
 declare -i lockingPID=0
@@ -885,7 +882,6 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
                [ --new-X ]          [ --no-new-X ]
                { DEVPATH | FOLDERSPEC ...}
    or: vbht attach { DEVPATH | FOLDERSPEC ...}
-   or: vbht forward { power | sleep }
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
    or: vbht logs [ -FfEeWwIiDdSs ]
                [ --show-fatal ]   [ --no-show-fatal ]
@@ -961,7 +957,7 @@ and USB auto-attachment.
       -L, --license  display the GNU Affero General Public License and exit
 
 Actions: the first argument to vbht must be either \`--help', \`--version',
-  \`--license', or an ACTION, ie. one of: \`start', \`attach', \`forward', \`info',
+  \`--license', or an ACTION, ie. one of: \`start', \`attach', \`info',
   \`logs', or \`stop'.
 
       start    start the virtual machine NAME or UUID in capturing mode
@@ -1140,17 +1136,6 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
           # shift the processed parameter out
           shift 1
         done
-      fi
-    ;;
-    'forward')
-      action='F'
-      # check for too few arguments
-      if (( $# == 1 )); then logError $"too few arguments!"; errors='X'
-      else
-        # save the argument
-        acpiEvent="${2}"
-        # yell about too many arguments
-        if (( $# != 2 )); then logWarning $"additional arguments ignored! -- \`:additionalArguments'" "additionalArguments:${*:3}"; fi
       fi
     ;;
     'info')
@@ -1469,41 +1454,6 @@ elif [[ "${action}" == 'A' ]]; then
   fi
 
 # ------------------------------------------------------------------------------
-# -- Forward -------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-elif [[ "${action}" == 'F' ]]; then
-  #
-  # $acpiEvent: event to forward
-  #
-
-  # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forward _ _; then errors='S'; else
-    # if the machine doesn't accept ACPI forwarding, fail
-    if [[ "${acpi_forward}" != 'Y' ]]; then errors='S'; else
-      # check if the user may forward ACPI events to the capturing virtual machine
-      if (( ( UID != vmUID ) && UID )); then errors='S'; else
-        # start building "forward" line
-        line="vboxmanage controlvm '${vmUUID}'"
-        # prepend "sudo" prefix
-        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
-
-        # finish building the "forward" line
-        if   [[ "${acpiEvent}" == 'power' ]]; then line="${line} acpipowerbutton"
-        elif [[ "${acpiEvent}" == 'sleep' ]]; then line="${line} acpisleepbutton"
-        # if the event is not recognized, just fail
-        else errors='S'; fi
-
-        # only try to evaluate well formed forward lines
-        if [[ "${errors}" == '' ]]; then
-          # evaluate forward line and report non-zero status
-          if ! eval -- "${line} 2> ${ERRPIPE}"; then errors='S'; fi
-        fi
-      fi
-    fi
-  fi
-
-# ------------------------------------------------------------------------------
 # -- Info ----------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
@@ -1597,31 +1547,42 @@ elif [[ "${action}" == 'L' ]]; then
 elif [[ "${action}" == 'X' ]]; then
   #
   # stop_method: 'A' / 'O' / 'R' / 'V' / 'S'
+  # force_stop: 'Y' / 'N'
   #
 
+  # be obnoxious about `--force' being ignored
+  if [[ "${force_stop}" == 'Y' && ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) ]]; then
+    logWarning $"forcing option will be ignored for stoppage type \`:stoppageType'" "stoppageType:${stop_method}"
+  fi
+
   # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ _ _ _; then logError $"no capturing virtual machine running!"; errors='X'
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forward _ _; then logError $"no capturing virtual machine running!"; errors='X'
   else
     # check if the user may stop the capturing virtual machine
     if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
     else
-      # start building "stop" line
-      line="vboxmanage controlvm '${vmUUID}'"
-      # append stoppage type
-      case "${stop_method}" in
-        'A') line="${line} acpipowerbutton" ;;
-        'O') line="${line} poweroff"        ;;
-        'R') line="${line} reset"           ;;
-        'S') line="${line} savestate"       ;;
-        'L') line="${line} acpisleepbutton" ;;
-        #
-        *) logError $"invalid stoppage type! -- \`:stoppage'" "stoppage:${stop_method}"; errors='X' ;;
-      esac
-      # prepend "sudo" prefix
-      if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
+      # check ACPI forwarding and forcing
+      if [[ ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) && "${acpi_forward}" == 'N' && "${force_stop}" == 'N' ]]; then
+        logError $"the capturing virtual machine is not being forwarded ACPI events! -- try forcing"; errors='X'
+      else
+        # start building "stop" line
+        line="vboxmanage controlvm '${vmUUID}'"
+        # append stoppage type
+        case "${stop_method}" in
+          'A') line="${line} acpipowerbutton" ;;
+          'O') line="${line} poweroff"        ;;
+          'R') line="${line} reset"           ;;
+          'S') line="${line} savestate"       ;;
+          'L') line="${line} acpisleepbutton" ;;
+          #
+          *) logError $"invalid stoppage type! -- \`:stoppage'" "stoppage:${stop_method}"; errors='X' ;;
+        esac
+        # prepend "sudo" prefix
+        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
 
-      # evaluate stop line and report non-zero status
-      if ! eval -- "${line} 2> ${ERRPIPE}"; then logWarning $"stoppage returned non-zero (:status) status!" "status:$?"; fi
+        # evaluate stop line and report non-zero status
+        if ! eval -- "${line} 2> ${ERRPIPE}"; then logWarning $"stoppage returned non-zero (:status) status!" "status:$?"; fi
+      fi
     fi
   fi
 fi

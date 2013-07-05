@@ -53,6 +53,8 @@ DONE:
 
   esto hace que las "tags" del estilo ":<nombre>" se reemplacen por el valor asociado a la clave "<nombre>" en el array dado; la ultima regla (que reemplaza ":_" por ":") esta para permitir que en el texto de salida aparezca algo de la forma ":<nombre>" sin que sea reemplazado.
 
++ ver si se puede consolidar forward con stop (hoy por hoy, stop --sleep, por ejemplo, no se fija si se estan forwardeando eventos, mientras que forward si, esta es la unica diferencia, pero esto se puede agregar al esquema consolidado agregando una opcion "--force" para evitar chequear el forwarding)
+
 
 
 TODO:
@@ -64,8 +66,6 @@ TODO:
     <name>@<path>  agrega una shared folder transient llamada <name> que apunta al path <path>
     <name>#<path>  agrega una shared folder transient llamada <name> que apunta al path <path>, READONLY
   se distingue un parametro "shared folder" de un "devpath" porque el primero tiene "@" o "#" en su nombre, los devpaths no pueden tenerlos
-
-- ver si se puede consolidar forward con stop (hoy por hoy, stop --sleep, por ejemplo, no se fija si se estan forwardeando eventos, mientras que forward si, esta es la unica diferencia, pero esto se puede agregar al esquema consolidado agregando una opcion "--force" para evitar chequear el forwarding)
 
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
