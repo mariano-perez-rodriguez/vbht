@@ -59,14 +59,6 @@ DONE:
 
 TODO:
 
-- detectar cuando un parametro no es nada significativo, que sea un devpath / folderspec
-
-- hacer que start y attach se banquen shared folders (por ahi, en lugar de attach hara falta otra action que agregue shared folders)
-  hacer que la sintaxis sea:
-    <name>@<path>  agrega una shared folder transient llamada <name> que apunta al path <path>
-    <name>#<path>  agrega una shared folder transient llamada <name> que apunta al path <path>, READONLY
-  se distingue un parametro "shared folder" de un "devpath" porque el primero tiene "@" o "#" en su nombre, los devpaths no pueden tenerlos
-
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
 
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
