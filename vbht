@@ -552,10 +552,6 @@ errListener() {
   done <> "${ERRPIPE}"
 }
 
-# ------------------------------------------------------------------------------
-# -- Misc functions ------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
 # Start print-listening on the given directory in the background
 # The given PRINTDIR is created (if not already existing), and, upon file
 # creation, the file in question is fed to "lpr" for printing; the printListener
@@ -721,6 +717,11 @@ declare -u action=''
 #  'L'  ACPI sleep
 declare -u stop_method="${VBHT_STOP_METHOD:-O}"
 
+# forced stoppage
+#  'Y'  ACPI off
+#  'N'  power off  (default)
+declare -u force_stop="${VBHT_FORCE_STOP:-N}"
+
 # whether to enable auto attachment
 #  'Y'  enable auto-attachment  (default)
 #  'N'  disable auto-attachment
@@ -882,8 +883,8 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
                [ --acpi-forward ]   [ --no-acpi-forward ]
                [ --print-listener ] [ --no-print-listener ]
                [ --new-X ]          [ --no-new-X ]
-               [ DEVPATH... ]
-   or: vbht attach [ DEVPATH... ]
+               { DEVPATH | FOLDERSPEC ...}
+   or: vbht attach { DEVPATH | FOLDERSPEC ...}
    or: vbht forward { power | sleep }
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
    or: vbht logs [ -FfEeWwIiDdSs ]
@@ -894,7 +895,8 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
                [ --show-debug ]   [ --no-show-debug ]
                [ --show-stderr ]  [ --no-show-stderr ]
                { UUID | NAME | HASH | - ...}
-   or: vbht stop [ -aorsl ] [ --acpi | --off | --reset | --save | --sleep ]
+   or: vbht stop [ -aorslc ] [ --force ]
+               [ --acpi | --off | --reset | --save | --sleep ]
 
 common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
 
@@ -945,6 +947,9 @@ and USB auto-attachment.
       -r, --reset  reset the capturing virtual machine
       -s, --save   save the capturing virtual machine's state
       -l, --sleep  send ACPI sleep signal to the capturing virtual machine
+      -c, --force  force the ACPI event to be sent, even if the machine is not
+                   being forwarded ACPI events, ignored if stoppage type is
+                   not one of \`acpi' or \`sleep'
 
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
@@ -960,11 +965,8 @@ Actions: the first argument to vbht must be either \`--help', \`--version',
   \`logs', or \`stop'.
 
       start    start the virtual machine NAME or UUID in capturing mode
-      attach   attach the (USB) device found at DEVPATH to the virtual machine
-               currently running in capturing mode
-      forward  forward an ACPI (power/sleep) event to the capturing virtual
-               machine, this action is completely silent (ie. no output is
-               generated to either stdout or stderr) when no errors
+      attach   attach the (USB) device found at each DEVPATH to the virtual
+               machine currently running in capturing mode
       info     return information about the virtual machine currently running
                in capturing mode (if there's one such machine)
       logs     show (coloured) log files for the given virtual machine, or for
@@ -983,12 +985,12 @@ Verbosity: the 6 verbosity levels are \`fatal', \`error', \`warning', \`info',
 
 Environment variables: several environment variables, with the \`VBHT_' prefix,
   are used to provide defaults: \`VBHT_AUTO_ATTACH', \`VBHT_ATTACH_KEYBOARD',
-  \`VBHT_ACPI_FORWARD', \`VBHT_LAUNCH_PRINT_LISTENER', \`VBHT_USE_NEW_X', and
-  \`VBHT_INFO_MACHINE_READABLE' can take either the \`Y' or \`N' values and
-  provide defaults for their corresponding options; the \`VBHT_STOP_METHOD'
-  variable can take either one of the \`A', \`O', \`R', \`S', \`L' values and each
-  determines a stoppage type whose equivalence to the options mentioned above
-  is given by:
+  \`VBHT_ACPI_FORWARD', \`VBHT_LAUNCH_PRINT_LISTENER', \`VBHT_USE_NEW_X',
+  \`VBHT_INFO_MACHINE_READABLE', and \`VBHT_FORCE_STOP' can take either the
+  \`Y' or \`N' values and provide defaults for their corresponding options; the
+  \`VBHT_STOP_METHOD' variable can take either one of the \`A', \`O', \`R',
+  \`S', \`L' values and each determines a stoppage type whose equivalence to the
+  options mentioned above is given by:
 
       A  -a, --acpi
       O  -o, --off
@@ -1020,13 +1022,15 @@ Exit status:
 NOTES:
   1. if more than one conflicting option is given (eg. more than one stop type),
      the last one takes precedence (this does NOT apply to verbosity options),
-  2. the DEVPATH argument has the same syntax as udev's \`\$devpath' or \`%p'
+  2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
      replaceable parameter (see UDEV(7)).
+  3. You can use \`:vbhtName ACTION --help' to get detailed help for the given
+     action.
 
 
 Written by Mariano Perez Rodriguez.
 Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
-"
+" "vbhtName:${0##*/}"
     # just be obnoxious about `--help' not being the only argument given :P
     if (( $# != 1 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
     exit 0
@@ -1244,6 +1248,8 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
           '--reset') stop_method='R' ;;
           '--save' ) stop_method='S' ;;
           '--sleep') stop_method='L' ;;
+          # check for forced
+          '--force') : ;;
           # check for verbosity options
           '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
           # check for short options
@@ -1256,6 +1262,8 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 'r') stop_method='R' ;;
                 's') stop_method='S' ;;
                 'l') stop_method='L' ;;
+                # check for forced
+                'c') : ;;
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                 # invalid option
