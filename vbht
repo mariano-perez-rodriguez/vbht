@@ -612,7 +612,7 @@ Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
                [ --print-listener ] [ --no-print-listener ]
                [ --new-X ]          [ --no-new-X ]
                { DEVPATH | FOLDERSPEC ...}
-   or: vbht attach { DEVPATH | FOLDERSPEC ...}
+   or: vbht attach [ -f ] [ --force ] { DEVPATH | FOLDERSPEC ...}
    or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
    or: vbht logs [ -FfEeWwIiDdSs ]
                [ --show-fatal ]   [ --no-show-fatal ]
@@ -674,10 +674,14 @@ and USB auto-attachment.
       -r, --reset  reset the capturing virtual machine
       -s, --save   save the capturing virtual machine's state
       -l, --sleep  send ACPI sleep signal to the capturing virtual machine
-      -f, --force  force the ACPI event to be sent, even if the machine is not
+
+      -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if
+                   the machine is not accepting auto attachments
+                   OR
+                   force the ACPI event to be sent, even if the machine is not
                    being forwarded ACPI events, ignored if stoppage type is
                    not one of \`acpi' or \`sleep'
-
+                   
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
@@ -713,11 +717,11 @@ Verbosity: the 6 verbosity levels are \`fatal', \`error', \`warning', \`info',
 Environment variables: several environment variables, with the \`VBHT_' prefix,
   are used to provide defaults: \`VBHT_AUTO_ATTACH', \`VBHT_ATTACH_KEYBOARD',
   \`VBHT_ACPI_FORWARD', \`VBHT_LAUNCH_PRINT_LISTENER', \`VBHT_USE_NEW_X',
-  \`VBHT_INFO_MACHINE_READABLE', and \`VBHT_FORCE_STOP' can take either the
-  \`Y' or \`N' values and provide defaults for their corresponding options; the
-  \`VBHT_STOP_METHOD' variable can take either one of the \`A', \`O', \`R',
-  \`S', \`L' values and each determines a stoppage type whose equivalence to the
-  options mentioned above is given by:
+  \`VBHT_INFO_MACHINE_READABLE', \`VBHT_FORCE_STOP', and \`VBHT_FORCE_ATTACH' can
+  take either the \`Y' or \`N' values and provide defaults for their corresponding
+  options; the \`VBHT_STOP_METHOD' variable can take either one of the \`A', \`O',
+  \`R', \`S', \`L' values and each determines a stoppage type whose equivalence to
+  the options mentioned above is given by:
 
       A  -a, --acpi
       O  -o, --off
@@ -751,7 +755,11 @@ NOTES:
      the last one takes precedence (this does NOT apply to verbosity options),
   2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
      replaceable parameter (see UDEV(7)).
-  3. You can use \`:vbhtName ACTION --help' to get detailed help for the given
+  3. the FOLDERSPEC arguments are of either of the forms: \`NAME@PATH' or
+     \`NAME#PATH'; the first one specifies a shared folder referring to \`PATH' and
+     being called \`NAME' inside the virtual machine, the second one is similar,
+     except that it specifies a READ-ONLY folder.
+  4. You can use \`:vbhtName ACTION --help' to get detailed help for the given
      action.
 
 
@@ -827,6 +835,367 @@ showLogsHelp() {
 # Depends: print()
 showStopHelp() {
   :
+}
+
+
+# ==============================================================================
+# == Actual work functions =====================================================
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# -- Start ---------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Perform the `start' action
+#
+# Usage: doStart
+# Returns: 0, always
+# Outputs: depends
+# Depends:
+doStart() {
+  #
+  # vmUUID: user provided UUID or name
+  # $@: DEVPATHs to attach on init
+  #
+  # auto_attach          : 'Y' / 'N'
+  # attach_keyboard      : 'Y' / 'N'
+  # acpi_forward         : 'Y' / 'N'
+  # launch_print_listener: 'Y' / 'N'
+  # use_new_X            : 'Y' / 'N'
+  #
+
+  # set common variables
+  vmUID="${UID}"
+  # verify that vmUUID refers to an actual virtual machine (mask errors,
+  # we're going to check for emptiness of "vmUUID")
+  temp="${vmUUID}"; vmUUID=$(getUUID ${vmUUID}) ||:
+  # fail if not a valid virtual machine specification
+  if ! [[ "${vmUUID}" ]]; then logError $"invalid virtual machine specification! -- \`:specification'" "specification:${temp}"; errors='X'
+  else
+    # try to get lock (mask errors, we're going to check the output)
+    lockingPID="$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}")" ||:
+    # if there's another process using the lock, fail
+    if (( lockingPID )); then logError $"another process is holding the lock with PID :lockingPID!" "lockingPID:${lockingPID}"; errors='X'
+    else
+      # save VirtualBox(R)'s ignored warnings
+      warns="$(getWarns)"
+      # try to set ignored warnings, and fail if we couldn't
+      if ! setWarns "${IGNOREWARNINGS}"; then
+        logError $"setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!" "status:$?"; errors='X'
+        # if warnings could not be disabled, disable keyboard attachment
+        attach_keyboard='E'
+        # tell the lockfile about it
+        addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+      fi
+
+      # if we have to launch the print listener, do that now
+      if [[ "${launch_print_listener}" == 'Y' ]]; then
+        # create the print directory if not already existing
+        mkdir -p "${PRINTDIR}"
+        # launch the print notifier in background
+        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & PNPID=$!
+      fi
+
+      # if we're going to attach keyboards disable input devices now
+      # (in order to avoid unusable virtual machines)
+      if [[ "${attach_keyboard}" == 'Y' ]]; then
+        # try to disable input devices
+        ret=0; indevs="$(disableKbdsMice)" || ret=$?
+        if (( ret )); then
+          # if disabling failed, yell
+          logError $"disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!" "inputDeviceList:${indevs}"; errors='X'
+          attach_keyboard='E'
+          # tell the lockfile about it
+          addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+        fi
+      fi
+
+      # start building launch line
+      line="VirtualBox --startvm '${vmUUID}'"
+      # prepend it with the "openx" wrapper if a new instance of the X server is
+      # to be run, additionally, add a "--fullscreen" modifier
+      if [[ "${use_new_X}" == 'Y' ]]; then line="sudo -Hn -- /opt/vbht/openx -n ${line} --fullscreen"; fi
+      # finish building launch line
+      line="${line} --no-debug --no-startvm-errormsgbox --start-running 2> ${ERRPIPE}"
+      # evaluate launch line (no point in checking exit code, as the line is run
+      # in the background) and get its PID
+      eval -- "${line}" & vbPID=$!
+      # let the log know about this
+      log ${SEV_OTHER_SLNT} "STARTED ${vmUUID}"
+
+      # wait for the VM to become available, recover if it timed out
+      if ! waitRunning "${vmUUID}"; then
+        logWarning $"could not wait for virtual machine to start up, keyboard attachment will NOT be available!"; errors='X'
+        # disable keyboard attachment
+        attach_keyboard='E'
+        # tell the lockfile about it
+        addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
+      fi
+
+      # machine is in "running" state, attach keyboards if need be
+      if [[ "${attach_keyboard}" == 'Y' ]]; then
+        # try to attach every keyboard, and, if there were errors, just yell, not much we can do now
+        if ! attachKbds "${vmUUID}"; then logError $"keyboard attachment failed for at least one device!"; errors='X'; fi
+      fi
+
+      # if there are ATTACHSPECs to attach, do that now
+      force_attachment='Y' doAttach
+
+      # if we disabled input devices, re-enable them now
+      if [[ "${indevs}" ]]; then
+        # try to re-enable input devices
+        if ! enableKbdsMice "${indevs}" &> "${ERRPIPE}"; then
+          # if re-enabling failed, yell and try to re-enable all of them
+          logError $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
+          if ! enableKbdsMice &> "${ERRPIPE}"; then logError $"re-enabling all input devices failed!"; errors='X'; fi
+        fi
+      fi
+
+      # wait for the virtual machine to finish (or be finished)
+      wait "${vbPID}"
+
+      # try to restore ignored warnings, if the command failed, at least
+      # let the user know which were the original warnings
+      if ! setWarns "${warns}"; then logWarning $"restoring ignored warnings returned non-zero (:status) status! -- \`:warnings'" "status:$?" "warnings:${warns}"; errors='X'; fi
+
+      # free lock file
+      rm -f -- "${LOCKFILE}"
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------
+# -- Attach --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Perform the `attach' action
+#
+# Usage: doAttach
+# Returns: 0, always
+# Outputs: depends
+# Depends:
+doAttach() {
+  #
+  # $@: ATTACHSPECs to attach
+  # force_attachment: 'Y' / 'N'
+  #
+
+  # try to read the lock file's line
+  if ! readLock _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
+    logError $"no capturing virtual machine running!"; errors='X'
+  else
+    # check auto-attachment and forcing
+    if [[ "${auto_attach}" == 'N' && "${force_attachment}" == 'N' ]]; then
+      logError $"the capturing virtual machine is not accepting attachments! -- try forcing"; errors='X'
+    else
+      # check if the user may attach to the capturing virtual machine
+      if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+      else
+        # start building "attach" line, prepend "sudo" prefix
+        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- "; else line=''; fi
+
+        # process each ATTACHSPEC in turn
+        while (( $# )); do
+          # determine if we're dealing with devpaths or folderspecs
+          case "${1}" in
+            # if the argument contains an `@' or `#' character, treat it as a FOLDERSPEC
+            *@*|*\#*)
+              # extract name and path
+              nameSF="${1%%[@#]*}"; pathSF="${1#*[@#]}"
+              # canonicalize path (mask errors)
+              temp="$(readlink -e "${pathSF}")" ||:
+              # check for path existence
+              if [[ ! -d "${temp}" ]]; then logError $"invalid shared folder path! -- \`:path'" "path:${pathSF}"; errors='X'
+              else
+                pathSF="${temp}"
+
+                # decide whether we're dealing with readonly folders or not
+                if [[ "${1:${#nameSF}:1}" == '@' ]]; then
+                  # evaluate attach line and report non-zero status
+                  if ! eval -- "${line} vboxmanage sharedfolder add '${vmUUID}' --name '${nameSF}' --hostpath '${pathSF}' --transient 2> ${ERRPIPE}"; then
+                    logWarning $"attaching shared folder \`:name' at path \`:path' returned non-zero (:status) status!" "name:${nameSF}" "path:${pathSF}" "status:$?"; errors='X'
+                  fi
+                else
+                  # evaluate (readonly) attach line and report non-zero status
+                  if ! eval -- "${line} vboxmanage sharedfolder add '${vmUUID}' --name '${nameSF}' --hostpath '${pathSF}' --transient --readonly 2> ${ERRPIPE}"; then
+                    logWarning $"attaching read-only shared folder \`:name' at path \`:path' returned non-zero (:status) status!" "name:${nameSF}" "path:${pathSF}" "status:$?"; errors='X'
+                  fi
+                fi
+              fi
+            ;;
+            # otherwise, it is a DEVPATH
+            *)
+              # get an address from the DEVPATH (mask errors)
+              address="$(devpath2address "${1}")" ||:
+              # show error if not a valid DEVPATH
+              if ! [[ "${address}" ]]; then logError $"invalid devpath! -- \`:devpath'" "devpath:${1}"; errors='X'
+              else
+                # evaluate attach line and report non-zero status
+                if ! eval -- "${line} vboxmanage controlvm '${vmUUID}' usbattach '${address}' 2> ${ERRPIPE}"; then
+                  logWarning $"attaching devpath \`:devpath' at address \`:address' returned non-zero (:status) status!" "devpath:${1}" "address:${address}" "status:$?"; errors='X'
+                fi
+              fi
+            ;;
+          esac
+          # shift the processed parameter out
+          shift 1
+        done
+      fi
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------
+# -- Info ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Perform the `info' action
+#
+# Usage: doInfo
+# Returns: 0, always
+# Outputs: depends
+# Depends:
+doInfo() {
+  #
+  # info_machine_readable: 'Y' / 'N'
+  #
+
+  # try to read the lock file's line
+  if ! readLock vmPID vmUID vmUUID prevRUNHASH auto_attach attach_keyboard acpi_forward launch_print_listener use_new_X; then
+    if [[ "${info_machine_readable}" == 'Y' ]]; then echo ''; else echo $"No vbht-managed virtual machine running!"; fi
+  else
+    if [[ "${info_machine_readable}" == 'Y' ]]; then
+      echo "${vmPID}:${vmUID}:${vmUUID}:${prevRUNHASH}:${auto_attach}:${attach_keyboard}:${acpi_forward}:${launch_print_listener}:${use_new_X}"
+    else
+      # write formatted output to stdout
+      println $"Capturing virtual machine's launcher PID: [:vmPID]"   "vmPID:${vmPID}"
+      println $"Capturing virtual machine's launcher UID: [:vmUID]"   "vmUID:${vmUID}"
+      println $"Capturing virtual machine's UUID        : [:vmUUID]"  "vmUUID:${vmUUID}"
+      println $"Capturing virtual machine's RUNHASH     : [:runhash]" "runhash:${prevRUNHASH}"
+      echo
+      println $"Auto-attachment    : [:autoAttach]"          "autoAttach:${auto_attach}"
+      println $"Keyboard attachment: [:attachKeyboard]"      "attachKeyboard:${attach_keyboard}"
+      println $"ACPI forwarding    : [:acpiForward]"         "acpiForward:${acpi_forward}"
+      println $"Print-listener     : [:launchPrintListener]" "launchPrintListener:${launch_print_listener}"
+      println $"Dedicated X server : [:useNewX]"             "useNewX:${use_new_X}"
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------
+# -- Logs ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Perform the `logs' action
+#
+# Usage: doLogs
+# Returns: 0, always
+# Outputs: depends
+# Depends:
+doLogs() {
+  #
+  # $@: machine descriptors (either of HASH / NAME / UUID / -)
+  #
+  # show_fatal  : 'Y' / 'N'
+  # show_error  : 'Y' / 'N'
+  # show_warning: 'Y' / 'N'
+  # show_info   : 'Y' / 'N'
+  # show_debug  : 'Y' / 'N'
+  # show_stderr : 'Y' / 'N'
+  #
+
+  # set up severity pattern values
+  temp=''
+  if [[ "${show_fatal}"   == 'Y' ]]; then temp="${temp}F"; fi
+  if [[ "${show_error}"   == 'Y' ]]; then temp="${temp}E"; fi
+  if [[ "${show_warning}" == 'Y' ]]; then temp="${temp}W"; fi
+  if [[ "${show_info}"    == 'Y' ]]; then temp="${temp}I"; fi
+  if [[ "${show_debug}"   == 'Y' ]]; then temp="${temp}D"; fi
+  if [[ "${show_stderr}"  == 'Y' ]]; then temp="${temp}S"; fi
+
+  # process each descriptor in turn
+  # general idea:
+  # - each argument is first checked, and translated to a RUNHASH
+  #   (NAME / UUID / - descriptors are "dereferenced") and pushed
+  #   into an array for later processing
+  # - once there are no more arguments left, process the array in
+  #   question one item at a time using the severity pattern
+  while (( $# )); do
+    # check for "currently running machine" descriptor
+    if [[ "${1}" == '-' ]]; then
+      # - go read the lock file
+      # - if there's no machine running, yell and be done with it
+      # - if there's a machine running, get the RUNHASH and push it
+      :
+    else
+      # this can either be a a machine's UUID, NAME, or HASH
+      # - ask getUUID() to look for a machine thus identified
+      # - if getUUID() failed, assume its a RUNHASH and push it,
+      # - otherwise, scan the logs to get all the RUNHASHes matching
+      #   the resulting UUID, push them all to the array
+      :
+    fi
+
+    # shift the processed parameter out
+    shift 1
+  done
+
+  # the actual magic comes here: the array will be holding RUNHASHes
+  # into the logs; take each in turn and, using the severity pattern
+  # show each to the user.
+}
+
+# ------------------------------------------------------------------------------
+# -- Stop ----------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# Perform the `stop' action
+#
+# Usage: doStop
+# Returns: 0, always
+# Outputs: depends
+# Depends:
+doStop() {
+  #
+  # stop_method: 'A' / 'O' / 'R' / 'V' / 'S'
+  # force_stop: 'Y' / 'N'
+  #
+
+  # be obnoxious about `--force' being ignored
+  if [[ "${force_stop}" == 'Y' && ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) ]]; then
+    logWarning $"forcing option will be ignored for stoppage type \`:stoppageType'" "stoppageType:${stop_method}"
+  fi
+
+  # try to read the lock file's line
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forward _ _; then logError $"no capturing virtual machine running!"; errors='X'
+  else
+    # check if the user may stop the capturing virtual machine
+    if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
+    else
+      # check ACPI forwarding and forcing
+      if [[ ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) && "${acpi_forward}" == 'N' && "${force_stop}" == 'N' ]]; then
+        logError $"the capturing virtual machine is not being forwarded ACPI events! -- try forcing"; errors='X'
+      else
+        # start building "stop" line
+        line="vboxmanage controlvm '${vmUUID}'"
+        # append stoppage type
+        case "${stop_method}" in
+          'A') line="${line} acpipowerbutton" ;;
+          'O') line="${line} poweroff"        ;;
+          'R') line="${line} reset"           ;;
+          'S') line="${line} savestate"       ;;
+          'L') line="${line} acpisleepbutton" ;;
+          #
+          *) logError $"invalid stoppage type! -- \`:stoppage'" "stoppage:${stop_method}"; errors='X' ;;
+        esac
+        # prepend "sudo" prefix
+        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
+
+        # evaluate stop line and report non-zero status
+        if ! eval -- "${line} 2> ${ERRPIPE}"; then logWarning $"stoppage returned non-zero (:status) status!" "status:$?"; fi
+      fi
+    fi
+  fi
 }
 
 
@@ -954,8 +1323,8 @@ declare -u action=''
 declare -u stop_method="${VBHT_STOP_METHOD:-O}"
 
 # forced stoppage
-#  'Y'  ACPI off
-#  'N'  power off  (default)
+#  'Y'  force ACPI forwarding
+#  'N'  use machine's setting  (default)
 declare -u force_stop="${VBHT_FORCE_STOP:-N}"
 
 # whether to enable auto attachment
@@ -963,6 +1332,11 @@ declare -u force_stop="${VBHT_FORCE_STOP:-N}"
 #  'N'  disable auto-attachment
 #  'E'  auto-attachment has been disabled due to errors
 declare -u auto_attach="${VBHT_AUTO_ATTACH:-Y}"
+
+# forced attachment
+#  'Y'  force ATTACHSPEC attachment
+#  'N'  use machine's setting  (default)
+declare -u force_attachment="${VBHT_FORCE_ATTACH:-N}"
 
 # whether to enable (USB) keyboard attachment
 #  'Y'  enable keyboard attachment  (default)
@@ -1053,6 +1427,11 @@ declare -i vmPID=0
 
 # the address of the (to be) attached USB device
 declare address=''
+# the name to be assigned to the (to be) created shared folder
+declare nameSF=''
+# the path to be assigned to the (to be) created shared folder
+declare pathSF=''
+
 # previous VirtualBox(R) warnings
 declare warns=''
 # disabled input devices list
@@ -1214,6 +1593,8 @@ else
         shift 1
         while (( $# )); do
           case "${1}" in
+            # check for forced
+            '--force') force_attachment='Y' ;;
             # check for verbosity options
             '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
             # check for help option
@@ -1230,6 +1611,8 @@ else
               # process each in turn
               for (( i = 1; i < ${#1}; i++ )); do
                 case "${1:$i:1}" in
+                  # check for forced
+                  'f') force_attachment='Y' ;;
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
                   # check for help option
@@ -1456,311 +1839,16 @@ readonly action verbosity
 # == Actual work ===============================================================
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# -- Start ---------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-if [[ "${action}" == 'S' ]]; then
+# dispatch action
+case "${action}" in
+  'S') doStart  ;;
+  'A') doAttach ;;
+  'I') doInfo   ;;
+  'L') doLogs   ;;
+  'X') doStop   ;;
   #
-  # vmUUID: user provided UUID or name
-  # $@: DEVPATHs to attach on init
-  #
-  # auto_attach          : 'Y' / 'N'
-  # attach_keyboard      : 'Y' / 'N'
-  # acpi_forward         : 'Y' / 'N'
-  # launch_print_listener: 'Y' / 'N'
-  # use_new_X            : 'Y' / 'N'
-  #
-
-  # set common variables
-  vmUID="${UID}"
-  # verify that vmUUID refers to an actual virtual machine (mask errors,
-  # we're going to check for emptiness of "vmUUID")
-  temp="${vmUUID}"; vmUUID=$(getUUID ${vmUUID}) ||:
-  # fail if not a valid virtual machine specification
-  if ! [[ "${vmUUID}" ]]; then logError $"invalid virtual machine specification! -- \`:specification'" "specification:${temp}"; errors='X'
-  else
-    # try to get lock (mask errors, we're going to check the output)
-    lockingPID="$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}")" ||:
-    # if there's another process using the lock, fail
-    if (( lockingPID )); then logError $"another process is holding the lock with PID :lockingPID!" "lockingPID:${lockingPID}"; errors='X'
-    else
-      # save VirtualBox(R)'s ignored warnings
-      warns="$(getWarns)"
-      # try to set ignored warnings, and fail if we couldn't
-      if ! setWarns "${IGNOREWARNINGS}"; then
-        logError $"setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!" "status:$?"; errors='X'
-        # if warnings could not be disabled, disable keyboard attachment
-        attach_keyboard='E'
-        # tell the lockfile about it
-        addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
-      fi
-
-      # if we have to launch the print listener, do that now
-      if [[ "${launch_print_listener}" == 'Y' ]]; then
-        # create the print directory if not already existing
-        mkdir -p "${PRINTDIR}"
-        # launch the print notifier in background
-        inotifywait -qme close_write --format '%f' -- "${PRINTDIR}" > "${PRNPIPE}" 2> "${ERRPIPE}" & PNPID=$!
-      fi
-
-      # if we're going to attach keyboards disable input devices now
-      # (in order to avoid unusable virtual machines)
-      if [[ "${attach_keyboard}" == 'Y' ]]; then
-        # try to disable input devices
-        ret=0; indevs="$(disableKbdsMice)" || ret=$?
-        if (( ret )); then
-          # if disabling failed, yell
-          logError $"disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!" "inputDeviceList:${indevs}"; errors='X'
-          attach_keyboard='E'
-          # tell the lockfile about it
-          addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
-        fi
-      fi
-
-      # start building launch line
-      line="VirtualBox --startvm '${vmUUID}'"
-      # prepend it with the "openx" wrapper if a new instance of the X server is
-      # to be run, additionally, add a "--fullscreen" modifier
-      if [[ "${use_new_X}" == 'Y' ]]; then line="sudo -Hn -- /opt/vbht/openx -n ${line} --fullscreen"; fi
-      # finish building launch line
-      line="${line} --no-debug --no-startvm-errormsgbox --start-running 2> ${ERRPIPE}"
-      # evaluate launch line (no point in checking exit code, as the line is run
-      # in the background) and get its PID
-      eval -- "${line}" & vbPID=$!
-      # let the log know about this
-      log ${SEV_OTHER_SLNT} "STARTED ${vmUUID}"
-
-      # wait for the VM to become available, recover if it timed out
-      if ! waitRunning "${vmUUID}"; then
-        logWarning $"could not wait for virtual machine to start up, keyboard attachment will NOT be available!"; errors='X'
-        # disable keyboard attachment
-        attach_keyboard='E'
-        # tell the lockfile about it
-        addToLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}"
-      fi
-
-      # machine is in "running" state, attach keyboards if need be
-      if [[ "${attach_keyboard}" == 'Y' ]]; then
-        # try to attach every keyboard, and, if there were errors, just yell, not much we can do now
-        if ! attachKbds "${vmUUID}"; then logError $"keyboard attachment failed for at least one device!"; errors='X'; fi
-      fi
-
-      # if there are devpaths to attach, do that now
-      while (( $# )); do
-        # get an address from the devpath (mask errors)
-        address="$(devpath2address "${1}")" ||:
-        # show error if not a valid DEVPATH
-        if ! [[ "${address}" ]]; then logError $"invalid devpath! -- \`:devpath'" "devpath:${1}"; errors='X'
-        else
-          # try to attach device line and report non-zero status
-          if ! vboxmanage controlvm "${vmUUID}" usbattach "${address}" 2> "${ERRPIPE}"; then
-            logWarning $"attaching devpath \`:devpath' at address \`:address' returned non-zero (:status) status!" "devpath:${1}" "address:${address}" "status:$?"; errors='X'
-          fi
-        fi
-        # shift the processed parameter out
-        shift 1
-      done
-
-      # if we disabled input devices, re-enable them now
-      if [[ "${indevs}" ]]; then
-        # try to re-enable input devices
-        if ! enableKbdsMice "${indevs}" &> "${ERRPIPE}"; then
-          # if re-enabling failed, yell and try to re-enable all of them
-          logError $"re-enabling input devices failed, trying to re-enable them all!"; errors='X'
-          if ! enableKbdsMice &> "${ERRPIPE}"; then logError $"re-enabling all input devices failed!"; errors='X'; fi
-        fi
-      fi
-
-      # wait for the virtual machine to finish (or be finished)
-      wait "${vbPID}"
-
-      # try to restore ignored warnings, if the command failed, at least
-      # let the user know which were the original warnings
-      if ! setWarns "${warns}"; then logWarning $"restoring ignored warnings returned non-zero (:status) status! -- \`:warnings'" "status:$?" "warnings:${warns}"; errors='X'; fi
-
-      # free lock file
-      rm -f -- "${LOCKFILE}"
-    fi
-  fi
-
-# ------------------------------------------------------------------------------
-# -- Attach --------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-elif [[ "${action}" == 'A' ]]; then
-  #
-  # $@: DEVPATHs to attach
-  #
-
-  # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
-    logError $"no capturing virtual machine running!"; errors='X'
-  else
-    # if the machine doesn't accept attachments, fail
-    if [[ "${auto_attach}" != 'Y' ]]; then logError $"the capturing virtual machine does not accept attachments!"; errors='X'
-    else
-      # check if the user may attach to the capturing virtual machine
-      if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
-      else
-        # start building "attach" line
-        line="vboxmanage controlvm '${vmUUID}' usbattach"
-        # prepend "sudo" prefix
-        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
-
-        # process each DEVPATH in turn
-        while (( $# )); do
-          # get an address from the DEVPATH (mask errors)
-          address="$(devpath2address "${1}")" ||:
-          # show error if not a valid DEVPATH
-          if ! [[ "${address}" ]]; then logError $"invalid devpath! -- \`:devpath'" "devpath:${1}"; errors='X'
-          else
-            # evaluate attach line and report non-zero status
-            if ! eval -- "${line} '${address}' 2> ${ERRPIPE}"; then
-              logWarning $"attaching devpath \`:devpath' at address \`:address' returned non-zero (:status) status!" "devpath:${1}" "address:${address}" "status:$?"; errors='X';
-            fi
-          fi
-          # shift the processed parameter out
-          shift 1
-        done
-      fi
-    fi
-  fi
-
-# ------------------------------------------------------------------------------
-# -- Info ----------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-elif [[ "${action}" == 'I' ]]; then
-  #
-  # info_machine_readable: 'Y' / 'N'
-  #
-
-  # try to read the lock file's line
-  if ! readLock vmPID vmUID vmUUID prevRUNHASH auto_attach attach_keyboard acpi_forward launch_print_listener use_new_X; then
-    if [[ "${info_machine_readable}" == 'Y' ]]; then echo ''; else echo $"No vbht-managed virtual machine running!"; fi
-  else
-    if [[ "${info_machine_readable}" == 'Y' ]]; then
-      echo "${vmPID}:${vmUID}:${vmUUID}:${prevRUNHASH}:${auto_attach}:${attach_keyboard}:${acpi_forward}:${launch_print_listener}:${use_new_X}"
-    else
-      # write formatted output to stdout
-      println $"Capturing virtual machine's launcher PID: [:vmPID]"   "vmPID:${vmPID}"
-      println $"Capturing virtual machine's launcher UID: [:vmUID]"   "vmUID:${vmUID}"
-      println $"Capturing virtual machine's UUID        : [:vmUUID]"  "vmUUID:${vmUUID}"
-      println $"Capturing virtual machine's RUNHASH     : [:runhash]" "runhash:${prevRUNHASH}"
-      echo
-      println $"Auto-attachment    : [:autoAttach]"          "autoAttach:${auto_attach}"
-      println $"Keyboard attachment: [:attachKeyboard]"      "attachKeyboard:${attach_keyboard}"
-      println $"ACPI forwarding    : [:acpiForward]"         "acpiForward:${acpi_forward}"
-      println $"Print-listener     : [:launchPrintListener]" "launchPrintListener:${launch_print_listener}"
-      println $"Dedicated X server : [:useNewX]"             "useNewX:${use_new_X}"
-    fi
-  fi
-
-# ------------------------------------------------------------------------------
-# -- Logs ----------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-elif [[ "${action}" == 'L' ]]; then
-  #
-  # $@: machine descriptors (either of HASH / NAME / UUID / -)
-  #
-  # show_fatal  : 'Y' / 'N'
-  # show_error  : 'Y' / 'N'
-  # show_warning: 'Y' / 'N'
-  # show_info   : 'Y' / 'N'
-  # show_debug  : 'Y' / 'N'
-  # show_stderr : 'Y' / 'N'
-  #
-
-  # set up severity pattern values
-  temp=''
-  if [[ "${show_fatal}"   == 'Y' ]]; then temp="${temp}F"; fi
-  if [[ "${show_error}"   == 'Y' ]]; then temp="${temp}E"; fi
-  if [[ "${show_warning}" == 'Y' ]]; then temp="${temp}W"; fi
-  if [[ "${show_info}"    == 'Y' ]]; then temp="${temp}I"; fi
-  if [[ "${show_debug}"   == 'Y' ]]; then temp="${temp}D"; fi
-  if [[ "${show_stderr}"  == 'Y' ]]; then temp="${temp}S"; fi
-
-  # process each descriptor in turn
-  # general idea:
-  # - each argument is first checked, and translated to a RUNHASH
-  #   (NAME / UUID / - descriptors are "dereferenced") and pushed
-  #   into an array for later processing
-  # - once there are no more arguments left, process the array in
-  #   question one item at a time using the severity pattern
-  while (( $# )); do
-    # check for "currently running machine" descriptor
-    if [[ "${1}" == '-' ]]; then
-      # - go read the lock file
-      # - if there's no machine running, yell and be done with it
-      # - if there's a machine running, get the RUNHASH and push it
-      :
-    else
-      # this can either be a a machine's UUID, NAME, or HASH
-      # - ask getUUID() to look for a machine thus identified
-      # - if getUUID() failed, assume its a RUNHASH and push it,
-      # - otherwise, scan the logs to get all the RUNHASHes matching
-      #   the resulting UUID, push them all to the array
-      :
-    fi
-
-    # shift the processed parameter out
-    shift 1
-  done
-
-  # the actual magic comes here: the array will be holding RUNHASHes
-  # into the logs; take each in turn and, using the severity pattern
-  # show each to the user.
-
-
-# ------------------------------------------------------------------------------
-# -- Stop ----------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-elif [[ "${action}" == 'X' ]]; then
-  #
-  # stop_method: 'A' / 'O' / 'R' / 'V' / 'S'
-  # force_stop: 'Y' / 'N'
-  #
-
-  # be obnoxious about `--force' being ignored
-  if [[ "${force_stop}" == 'Y' && ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) ]]; then
-    logWarning $"forcing option will be ignored for stoppage type \`:stoppageType'" "stoppageType:${stop_method}"
-  fi
-
-  # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forward _ _; then logError $"no capturing virtual machine running!"; errors='X'
-  else
-    # check if the user may stop the capturing virtual machine
-    if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
-    else
-      # check ACPI forwarding and forcing
-      if [[ ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) && "${acpi_forward}" == 'N' && "${force_stop}" == 'N' ]]; then
-        logError $"the capturing virtual machine is not being forwarded ACPI events! -- try forcing"; errors='X'
-      else
-        # start building "stop" line
-        line="vboxmanage controlvm '${vmUUID}'"
-        # append stoppage type
-        case "${stop_method}" in
-          'A') line="${line} acpipowerbutton" ;;
-          'O') line="${line} poweroff"        ;;
-          'R') line="${line} reset"           ;;
-          'S') line="${line} savestate"       ;;
-          'L') line="${line} acpisleepbutton" ;;
-          #
-          *) logError $"invalid stoppage type! -- \`:stoppage'" "stoppage:${stop_method}"; errors='X' ;;
-        esac
-        # prepend "sudo" prefix
-        if (( UID == 0 )); then line="sudo -Hnu '#${vmUID}' -- ${line}"; fi
-
-        # evaluate stop line and report non-zero status
-        if ! eval -- "${line} 2> ${ERRPIPE}"; then logWarning $"stoppage returned non-zero (:status) status!" "status:$?"; fi
-      fi
-    fi
-  fi
-fi
-
+  *) logError $"something went very wrong! late-unrecognised action: \`:action'!" "action:${action}"; errors='X' ;;
+esac
 
 # ==============================================================================
 # == Finalisation ==============================================================
