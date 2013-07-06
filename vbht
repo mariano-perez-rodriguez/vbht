@@ -1238,7 +1238,7 @@ doStart() {
       # in the background) and get its PID
       eval -- "${line}" & vbPID=$!
       # let the log know about this
-      log ${SEV_OTHER_SLNT} "STARTED ${vmUUID}"
+      logOtherSlnt "STARTED ${vmUUID}"
 
       # wait for the VM to become available, recover if it timed out
       if ! waitRunning "${vmUUID}"; then
