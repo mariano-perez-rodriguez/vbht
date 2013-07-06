@@ -594,6 +594,243 @@ printListener() {
 
 
 # ==============================================================================
+# == Messaging functions =======================================================
+# ==============================================================================
+
+# Display the main help message
+#
+# Usage: showHelp
+# Returns: 0, always
+# Outputs: main help text
+# Depends: print()
+showHelp() {
+  print $"\
+Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
+               [ --auto-attach ]    [ --no-auto-attach ]
+               [ --kbd-attach ]     [ --no-kbd-attach ]
+               [ --acpi-forward ]   [ --no-acpi-forward ]
+               [ --print-listener ] [ --no-print-listener ]
+               [ --new-X ]          [ --no-new-X ]
+               { DEVPATH | FOLDERSPEC ...}
+   or: vbht attach { DEVPATH | FOLDERSPEC ...}
+   or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
+   or: vbht logs [ -FfEeWwIiDdSs ]
+               [ --show-fatal ]   [ --no-show-fatal ]
+               [ --show-error ]   [ --no-show-error ]
+               [ --show-warning ] [ --no-show-warning ]
+               [ --show-info ]    [ --no-show-info ]
+               [ --show-debug ]   [ --no-show-debug ]
+               [ --show-stderr ]  [ --no-show-stderr ]
+               { UUID | NAME | HASH | - ...}
+   or: vbht stop [ -aorsl ] [ -f ] [ --force ]
+               [ --acpi | --off | --reset | --save | --sleep ]
+
+common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
+
+   or: vbht { -h | --help }
+   or: vbht { -V | --version }
+   or: vbht { -L | --license }
+
+Launch VirtualBox(R) virtual machines in \`capturing' mode, thus effectively
+implementing \`kiosk mode', allowing for transparent printing, keyboard jailing,
+and USB auto-attachment.
+
+      -A, --auto-attach        automatically attach USB devices plugged in
+                               during the operation of the virtual machine,
+                               additionally, allow them to be attached through
+                               vbht
+      -a, --no-auto-attach     do NOT automatically attach USB devices plugged
+                               in during the operation of the virtual machine,
+                               nor permit them to be attached through vbht
+      -K, --kbd-attach         try to attach USB keyboards
+      -k, --no-kbd-attach      do NOT try to attach USB keyboards
+      -F, --acpi-forward       forward ACPI power-button / sleep-button events
+                               to the virtual machine
+      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual
+                               machine
+      -P, --print-listener     run the print listening script
+      -p, --no-print-listener  do NOT run the print listening script
+      -X, --new-X              launch a fresh X server
+      -x, --no-new-X           do NOT launch a fresh X server
+
+      -M, --machine-readable     generate output in machine readable format
+      -m, --no-machine-readable  generate output in human readable format
+
+      -F, --show-fatal       show \`fatal' log lines
+      -f, --no-show-fatal    do NOT show \`fatal' log lines
+      -E, --show-error       show \`error' log lines
+      -e, --no-show-error    do NOT show \`error' log lines
+      -W, --show-warning     show \`warning' log lines
+      -w, --no-show-warning  do NOT show \`warning' log lines
+      -I, --show-info        show \`info' log lines
+      -i, --no-show-info     do NOT show \`info' log lines
+      -D, --show-debug       show \`debug' log lines
+      -d, --no-show-debug    do NOT show \`debug' log lines
+      -S, --show-stderr      show \`stderr' log lines
+      -s, --no-show-stderr   do NOT show \`stderr' log lines
+
+      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine
+      -o, --off    turn the capturing virtual machine off
+      -r, --reset  reset the capturing virtual machine
+      -s, --save   save the capturing virtual machine's state
+      -l, --sleep  send ACPI sleep signal to the capturing virtual machine
+      -f, --force  force the ACPI event to be sent, even if the machine is not
+                   being forwarded ACPI events, ignored if stoppage type is
+                   not one of \`acpi' or \`sleep'
+
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      --  signal the end of options, lake the rest of the parameters literally
+
+      -h, --help     display this help and exit
+      -V, --version  output version information and exit
+      -L, --license  display the GNU Affero General Public License and exit
+
+Actions: the first argument to vbht must be either \`--help', \`--version',
+  \`--license', or an ACTION, ie. one of: \`start', \`attach', \`info',
+  \`logs', or \`stop'.
+
+      start    start the virtual machine NAME or UUID in capturing mode
+      attach   attach the (USB) device found at each DEVPATH to the virtual
+               machine currently running in capturing mode
+      info     return information about the virtual machine currently running
+               in capturing mode (if there's one such machine)
+      logs     show (coloured) log files for the given virtual machine, or for
+               the currently running one, if there's one such and \`-' given
+      stop     stop the virtual machine currently running in capturing mode
+
+Verbosity: the 6 verbosity levels are \`fatal', \`error', \`warning', \`info',
+  \`debug', and \`stderr'.
+
+      fatal    a condition which makes it impossible to go on
+      error    an error condition that can be ignored in order to go on
+      warning  an error condition that has no immediate consequences
+      info     an informational message about the state of the program
+      debug    an execution log of every command ran
+      stderr   the standard error lines, as redirected internally
+
+Environment variables: several environment variables, with the \`VBHT_' prefix,
+  are used to provide defaults: \`VBHT_AUTO_ATTACH', \`VBHT_ATTACH_KEYBOARD',
+  \`VBHT_ACPI_FORWARD', \`VBHT_LAUNCH_PRINT_LISTENER', \`VBHT_USE_NEW_X',
+  \`VBHT_INFO_MACHINE_READABLE', and \`VBHT_FORCE_STOP' can take either the
+  \`Y' or \`N' values and provide defaults for their corresponding options; the
+  \`VBHT_STOP_METHOD' variable can take either one of the \`A', \`O', \`R',
+  \`S', \`L' values and each determines a stoppage type whose equivalence to the
+  options mentioned above is given by:
+
+      A  -a, --acpi
+      O  -o, --off
+      R  -r, --reset
+      S  -s, --save
+      L  -l, --sleep
+
+  last, the \`VBHT_VERBOSITY' variable may take any integer number to be taken
+  as the default verbosity value (note, however, that values below 0 or above 6
+  will be ignored and truncated to that range).
+
+Examples (\`>' stands for the shell prompt):
+
+    > vbht start 'My VM' --no-print-listener --no-auto-attach
+
+    > vbht attach /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7
+
+    > vbht info --machine-readable
+    12345:.67890:.01234567-89ab-cdef-0123-4567890abcde:.HASH:.N:.Y:.N:.Y:.Y
+
+    > vbht stop --acpi
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if no capturing virtual machines found.
+
+
+NOTES:
+  1. if more than one conflicting option is given (eg. more than one stop type),
+     the last one takes precedence (this does NOT apply to verbosity options),
+  2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
+     replaceable parameter (see UDEV(7)).
+  3. You can use \`:vbhtName ACTION --help' to get detailed help for the given
+     action.
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+" "vbhtName:${0##*/}"
+}
+
+# Display the version message
+#
+# Usage: showVersion
+# Returns: 0, always
+# Outputs: version text
+# Depends: print()
+showVersion() {
+  print $"\
+vbht 0.3
+Copyright (C) 2012 Mariano Perez Rodriguez
+License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+"
+}
+
+# Display the `start' help message
+#
+# Usage: showHelp
+# Returns: 0, always
+# Outputs: main help text
+# Depends: print()
+showStartHelp() {
+  :
+}
+
+# Display the `attach' help message
+#
+# Usage: showHelp
+# Returns: 0, always
+# Outputs: main help text
+# Depends: print()
+showAttachHelp() {
+  :
+}
+
+# Display the `info' help message
+#
+# Usage: showHelp
+# Returns: 0, always
+# Outputs: main help text
+# Depends: print()
+showInfoHelp() {
+  :
+}
+
+# Display the `logs' help message
+#
+# Usage: showHelp
+# Returns: 0, always
+# Outputs: main help text
+# Depends: print()
+showLogsHelp() {
+  :
+}
+
+# Display the `stop' help message
+#
+# Usage: showHelp
+# Returns: 0, always
+# Outputs: main help text
+# Depends: print()
+showStopHelp() {
+  :
+}
+
+
+# ==============================================================================
 # == Constants =================================================================
 # ==============================================================================
 
@@ -790,6 +1027,13 @@ declare -u show_stderr='Y'
 # can't parse as integer)
 declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-2} )) 2> /dev/null ||:
 
+# ------------------------------------------------------------------------------
+# -- Help display variables ----------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# whether a parameter for a given action has already been seen
+declare -i parameter_seen; (( parameter_seen = 1 ))
+
 
 # ==============================================================================
 # == General variables =========================================================
@@ -873,160 +1117,7 @@ if (( $# == 0 )); then logError $"no arguments provided!"; errors='X'
 else
   # check for `--help' argument
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
-    print $"\
-Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
-               [ --auto-attach ]    [ --no-auto-attach ]
-               [ --kbd-attach ]     [ --no-kbd-attach ]
-               [ --acpi-forward ]   [ --no-acpi-forward ]
-               [ --print-listener ] [ --no-print-listener ]
-               [ --new-X ]          [ --no-new-X ]
-               { DEVPATH | FOLDERSPEC ...}
-   or: vbht attach { DEVPATH | FOLDERSPEC ...}
-   or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
-   or: vbht logs [ -FfEeWwIiDdSs ]
-               [ --show-fatal ]   [ --no-show-fatal ]
-               [ --show-error ]   [ --no-show-error ]
-               [ --show-warning ] [ --no-show-warning ]
-               [ --show-info ]    [ --no-show-info ]
-               [ --show-debug ]   [ --no-show-debug ]
-               [ --show-stderr ]  [ --no-show-stderr ]
-               { UUID | NAME | HASH | - ...}
-   or: vbht stop [ -aorslc ] [ --force ]
-               [ --acpi | --off | --reset | --save | --sleep ]
-
-common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
-
-   or: vbht { -h | --help }
-   or: vbht { -V | --version }
-   or: vbht { -L | --license }
-
-Launch VirtualBox(R) virtual machines in \`capturing' mode, thus effectively
-implementing \`kiosk mode', allowing for transparent printing, keyboard jailing,
-and USB auto-attachment.
-
-      -A, --auto-attach        automatically attach USB devices plugged in
-                               during the operation of the virtual machine,
-                               additionally, allow them to be attached through
-                               vbht
-      -a, --no-auto-attach     do NOT automatically attach USB devices plugged
-                               in during the operation of the virtual machine,
-                               nor permit them to be attached through vbht
-      -K, --kbd-attach         try to attach USB keyboards
-      -k, --no-kbd-attach      do NOT try to attach USB keyboards
-      -F, --acpi-forward       forward ACPI power-button / sleep-button events
-                               to the virtual machine
-      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual
-                               machine
-      -P, --print-listener     run the print listening script
-      -p, --no-print-listener  do NOT run the print listening script
-      -X, --new-X              launch a fresh X server
-      -x, --no-new-X           do NOT launch a fresh X server
-
-      -M, --machine-readable     generate output in machine readable format
-      -m, --no-machine-readable  generate output in human readable format
-
-      -F, --show-fatal       show \`fatal' log lines
-      -f, --no-show-fatal    do NOT show \`fatal' log lines
-      -E, --show-error       show \`error' log lines
-      -e, --no-show-error    do NOT show \`error' log lines
-      -W, --show-warning     show \`warning' log lines
-      -w, --no-show-warning  do NOT show \`warning' log lines
-      -I, --show-info        show \`info' log lines
-      -i, --no-show-info     do NOT show \`info' log lines
-      -D, --show-debug       show \`debug' log lines
-      -d, --no-show-debug    do NOT show \`debug' log lines
-      -S, --show-stderr      show \`stderr' log lines
-      -s, --no-show-stderr   do NOT show \`stderr' log lines
-
-      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine
-      -o, --off    turn the capturing virtual machine off
-      -r, --reset  reset the capturing virtual machine
-      -s, --save   save the capturing virtual machine's state
-      -l, --sleep  send ACPI sleep signal to the capturing virtual machine
-      -c, --force  force the ACPI event to be sent, even if the machine is not
-                   being forwarded ACPI events, ignored if stoppage type is
-                   not one of \`acpi' or \`sleep'
-
-      -q, --quiet    decrease by 1 the verbosity level
-      -v, --verbose  increase by 1 the verbosity level
-
-      --  signal the end of options, lake the rest of the parameters literally
-
-      -h, --help     display this help and exit
-      -V, --version  output version information and exit
-      -L, --license  display the GNU Affero General Public License and exit
-
-Actions: the first argument to vbht must be either \`--help', \`--version',
-  \`--license', or an ACTION, ie. one of: \`start', \`attach', \`info',
-  \`logs', or \`stop'.
-
-      start    start the virtual machine NAME or UUID in capturing mode
-      attach   attach the (USB) device found at each DEVPATH to the virtual
-               machine currently running in capturing mode
-      info     return information about the virtual machine currently running
-               in capturing mode (if there's one such machine)
-      logs     show (coloured) log files for the given virtual machine, or for
-               the currently running one, if there's one such and \`-' given
-      stop     stop the virtual machine currently running in capturing mode
-
-Verbosity: the 6 verbosity levels are \`fatal', \`error', \`warning', \`info',
-  \`debug', and \`stderr'.
-
-      fatal    a condition which makes it impossible to go on
-      error    an error condition that can be ignored in order to go on
-      warning  an error condition that has no immediate consequences
-      info     an informational message about the state of the program
-      debug    an execution log of every command ran
-      stderr   the standard error lines, as redirected internally
-
-Environment variables: several environment variables, with the \`VBHT_' prefix,
-  are used to provide defaults: \`VBHT_AUTO_ATTACH', \`VBHT_ATTACH_KEYBOARD',
-  \`VBHT_ACPI_FORWARD', \`VBHT_LAUNCH_PRINT_LISTENER', \`VBHT_USE_NEW_X',
-  \`VBHT_INFO_MACHINE_READABLE', and \`VBHT_FORCE_STOP' can take either the
-  \`Y' or \`N' values and provide defaults for their corresponding options; the
-  \`VBHT_STOP_METHOD' variable can take either one of the \`A', \`O', \`R',
-  \`S', \`L' values and each determines a stoppage type whose equivalence to the
-  options mentioned above is given by:
-
-      A  -a, --acpi
-      O  -o, --off
-      R  -r, --reset
-      S  -s, --save
-      L  -l, --sleep
-
-  last, the \`VBHT_VERBOSITY' variable may take any integer number to be taken
-  as the default verbosity value (note, however, that values below 0 or above 6
-  will be ignored and truncated to that range).
-
-Examples (\`>' stands for the shell prompt):
-
-    > vbht start 'My VM' --no-print-listener --no-auto-attach
-
-    > vbht attach /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7
-
-    > vbht info --machine-readable
-    12345:.67890:.01234567-89ab-cdef-0123-4567890abcde:.HASH:.N:.Y:.N:.Y:.Y
-
-    > vbht stop --acpi
-
-Exit status:
-   0  if OK,
-   1  if syntax error,
-   2  if no capturing virtual machines found.
-
-
-NOTES:
-  1. if more than one conflicting option is given (eg. more than one stop type),
-     the last one takes precedence (this does NOT apply to verbosity options),
-  2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
-     replaceable parameter (see UDEV(7)).
-  3. You can use \`:vbhtName ACTION --help' to get detailed help for the given
-     action.
-
-
-Written by Mariano Perez Rodriguez.
-Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
-" "vbhtName:${0##*/}"
+    showHelp
     # just be obnoxious about `--help' not being the only argument given :P
     if (( $# != 1 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
     exit 0
@@ -1034,16 +1125,7 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 
   # check for `--version' argument
   if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
-    print $"\
-vbht 0.3
-Copyright (C) 2012 Mariano Perez Rodriguez
-License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl.html>.
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
-
-Written by Mariano Perez Rodriguez.
-Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
-"
+    showVersion
     # just be obnoxious about `--version' not being the only argument given :P
     if (( $# != 1 )); then logWarning $"\`--version' is supposed to be the ONLY argument given!"; fi
     exit 0
@@ -1078,6 +1160,13 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
             '--new-X'         ) use_new_X='Y'             ;; '--no-new-X'         ) use_new_X='N'             ;;
             # check for verbosity options
             '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
+            # check for help option
+            '--help')
+              showStartHelp
+              # just be obnoxious about `--help' not being the only argument given :P
+              if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+              exit 0
+            ;;
             # check for end-of-options
             '--') shift 1; break ;;
             # check for short options
@@ -1092,14 +1181,25 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                   'X') use_new_X='Y'             ;; 'x') use_new_X='N'             ;;
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
+                  # check for help option
+                  'h')
+                    showStartHelp
+                    # just be obnoxious about `h' not being the only argument given :P
+                    if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                    exit 0
+                  ;;
                   # invalid option
                   *) logError $"invalid option at \`:longOption'! -- \`:shortOption'" "longOption:${1}" "shortOption:${1:$i:1}"; errors='X' ;;
                 esac
+                # we've seen a parameter this far
+                (( parameter_seen = 1 ))
               done
             ;;
             # invalid option
             *) logError $"invalid option! -- \`:option'" "option:${1}"; errors='X' ;;
           esac
+          # we've seen a parameter this far
+          (( parameter_seen = 1 ))
           # shift the processed parameter out
           shift 1
         done
@@ -1116,6 +1216,13 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
           case "${1}" in
             # check for verbosity options
             '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
+            # check for help option
+            '--help')
+              showAttachHelp
+              # just be obnoxious about `--help' not being the only argument given :P
+              if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+              exit 0
+            ;;
             # check for end-of-options
             '--') shift 1; break ;;
             # check for short options
@@ -1125,14 +1232,25 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 case "${1:$i:1}" in
                   # check for verbosity options
                   'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
+                  # check for help option
+                  'h')
+                    showAttachHelp
+                    # just be obnoxious about `h' not being the only argument given :P
+                    if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                    exit 0
+                  ;;
                   # invalid option
                   *) logError $"invalid option at \`:longOption'! -- \`:shortOption'" "longOption:${1}" "shortOption:${1:$i:1}"; errors='X' ;;
                 esac
+                # we've seen a parameter this far
+                (( parameter_seen = 1 ))
               done
             ;;
             # invalid option
             *) logError $"invalid option! -- \`:option'" "option:${1}"; errors='X' ;;
           esac
+          # we've seen a parameter this far
+          (( parameter_seen = 1 ))
           # shift the processed parameter out
           shift 1
         done
@@ -1148,6 +1266,13 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
           '--machine-readable') info_machine_readable='Y' ;; '--no-machine-readable') info_machine_readable='N' ;;
           # check for verbosity options
           '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
+          # check for help option
+          '--help')
+            showInfoHelp
+            # just be obnoxious about `--help' not being the only argument given :P
+            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+            exit 0
+          ;;
           # check for short options
           -*)
             # process each in turn
@@ -1156,14 +1281,25 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 'M') info_machine_readable='Y' ;; 'm') info_machine_readable='N' ;;
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
+                # check for help option
+                'h')
+                  showInfoHelp
+                  # just be obnoxious about `h' not being the only argument given :P
+                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                  exit 0
+                ;;
                 # invalid option
                 *) logError $"invalid option at \`:longOption'! -- \`:shortOption'" "longOption:${1}" "shortOption:${1:$i:1}"; errors='X' ;;
               esac
+              # we've seen a parameter this far
+              (( parameter_seen = 1 ))
             done
           ;;
           # invalid option
           *) logError $"invalid option! -- \`:option'" "option:${1}"; errors='X' ;;
         esac
+        # we've seen a parameter this far
+        (( parameter_seen = 1 ))
         # shift the processed parameter out
         shift 1
       done
@@ -1183,6 +1319,13 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
           '--show-stderr' ) show_stderr='Y'  ;; '--no-show-stderr' ) show_stderr='N'  ;;
           # check for verbosity options
           '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
+          # check for help option
+          '--help')
+            showLogsHelp
+            # just be obnoxious about `--help' not being the only argument given :P
+            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+            exit 0
+          ;;
           # check for end-of-options
           '--') shift 1; break ;;
           # check for "currently running machine" descriptor
@@ -1200,6 +1343,13 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 'S') show_stderr='Y'  ;; 's') show_stderr='N'  ;;
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
+                # check for help option
+                'h')
+                  showLogsHelp
+                  # just be obnoxious about `h' not being the only argument given :P
+                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                  exit 0
+                ;;
                 # invalid option
                 *)
                   # if this is the very first character, then this may very well be
@@ -1212,11 +1362,15 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                   fi
                 ;;
               esac
+              # we've seen a parameter this far
+              (( parameter_seen = 1 ))
             done
           ;;
           # invalid option, can only be a descriptor
           *) break ;;
         esac
+        # we've seen a parameter this far
+        (( parameter_seen = 1 ))
         # shift the processed parameter out
         shift 1
       done
@@ -1234,9 +1388,16 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
           '--save' ) stop_method='S' ;;
           '--sleep') stop_method='L' ;;
           # check for forced
-          '--force') : ;;
+          '--force') force_stop='Y' ;;
           # check for verbosity options
           '--quiet') (( verbosity-- )) ||: ;; '--verbose') (( verbosity++ )) ||: ;;
+          # check for help option
+          '--help')
+            showStopHelp
+            # just be obnoxious about `--help' not being the only argument given :P
+            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+            exit 0
+          ;;
           # check for short options
           -*)
             # process each in turn
@@ -1248,17 +1409,28 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
                 's') stop_method='S' ;;
                 'l') stop_method='L' ;;
                 # check for forced
-                'c') : ;;
+                'f') force_stop='Y' ;;
                 # check for verbosity options
                 'q') (( verbosity-- )) ||: ;; 'v') (( verbosity++ )) ||: ;;
+                # check for help option
+                'h')
+                  showStopHelp
+                  # just be obnoxious about `h' not being the only argument given :P
+                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                  exit 0
+                ;;
                 # invalid option
                 *) logError $"invalid option at \`:longOption'! -- \`:shortOption'" "longOption:${1}" "shortOption:${1:$i:1}"; errors='X' ;;
               esac
+              # we've seen a parameter this far
+              (( parameter_seen = 1 ))
             done
           ;;
           # invalid option
           *) logError $"invalid option! -- \`:option'" "option:${1}"; errors='X' ;;
         esac
+        # we've seen a parameter this far
+        (( parameter_seen = 1 ))
         # shift the processed parameter out
         shift 1
       done
@@ -1268,7 +1440,18 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 fi
 
 # in case of errors, show info and exit
-if [[ "${errors}" ]]; then println $"Try \`:vbhtName --help' for more information." "vbhtName:${0##*/}" >&2; exit 1; fi
+if [[ "${errors}" ]]; then
+  case "${action}" in
+    'S') println $"Try \`:vbhtName start --help' for more information." "vbhtName:${0##*/}"  >&2 ;;
+    'A') println $"Try \`:vbhtName attach --help' for more information." "vbhtName:${0##*/}" >&2 ;;
+    'I') println $"Try \`:vbhtName info --help' for more information." "vbhtName:${0##*/}"   >&2 ;;
+    'L') println $"Try \`:vbhtName logs --help' for more information." "vbhtName:${0##*/}"   >&2 ;;
+    'X') println $"Try \`:vbhtName stop --help' for more information." "vbhtName:${0##*/}"   >&2 ;;
+    #
+    *) println $"Try \`:vbhtName --help' for more information." "vbhtName:${0##*/}" >&2 ;;
+  esac
+  exit 1
+fi
 
 # fix up verbosity
 if (( verbosity > MAX_VERB )); then (( verbosity = ${MAX_VERB} )); fi
