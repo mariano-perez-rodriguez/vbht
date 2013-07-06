@@ -484,6 +484,9 @@ log() {
   # set up temporaries
   local std_err=''
   local std_log=''
+  local lines="$(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
+  local line=''
+  local header=''
 
   # prepend severity type string to output line (don't do anything for
   # unrecognised severities) and build stderr and stdlog temporaries
@@ -495,14 +498,16 @@ log() {
   elif (( severity == SEV_STDERR  )); then sev_name='S'; std_err="${START_STDERR}"$"Stderr"":${STOP_STDERR}"   ; std_log=$"Stderr"':'
   else                                     sev_name='O'
   fi
-  # fill stderr and stdlog temporaries up with print output
-  std_err="${std_err} $(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
-  std_log="${std_log} $(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
+  # build header
+  header="[${RUNHASH}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}]"
 
-  # if verbosity mandates, show to stderr
-  if (( severity <= verbosity )); then echo "${std_err}" >&2; fi
-  # write to the log file
-  echo "[${RUNHASH}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}] ${std_log}" >> "${LOGFILE}"
+  # treat each output line in turn
+  while IFS= read -r line; do
+    # if verbosity mandates, show to stderr
+    if (( severity <= verbosity )); then echo "${std_err} ${line}" >&2; fi
+    # write to the log file
+    echo "${header} ${std_log} ${line}" >> "${LOGFILE}"
+  done <<< "${lines}"
 }
 
 # Call log() with the appropriate severity
