@@ -631,9 +631,9 @@ common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
    or: vbht { -V | --version }
    or: vbht { -L | --license }
 
-Launch VirtualBox(R) virtual machines in \`capturing' mode, thus effectively
-implementing \`kiosk mode', allowing for transparent printing, keyboard jailing,
-and USB auto-attachment.
+Launch, manage, query and stop VirtualBox(R) virtual machines in \`capturing'
+mode, thus effectively implementing \`kiosk mode', allowing for transparent
+printing, keyboard jailing, and USB auto-attachment.
 
       -A, --auto-attach        automatically attach USB devices plugged in
                                during the operation of the virtual machine,
@@ -697,7 +697,8 @@ Actions: the first argument to vbht must be either \`--help', \`--version',
 
       start    start the virtual machine NAME or UUID in capturing mode
       attach   attach the (USB) device found at each DEVPATH to the virtual
-               machine currently running in capturing mode
+               machine currently running in capturing mode, or each FOLDERSPEC
+               to its corresponding shared folder
       info     return information about the virtual machine currently running
                in capturing mode (if there's one such machine)
       logs     show (coloured) log files for the given virtual machine, or for
@@ -751,14 +752,15 @@ Exit status:
 
 
 NOTES:
-  1. if more than one conflicting option is given (eg. more than one stop type),
-     the last one takes precedence (this does NOT apply to verbosity options),
+  1. if more than one conflicting option is given the last one takes precedence
+     (this does NOT apply to verbosity options),
   2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
-     replaceable parameter (see UDEV(7)).
+     replaceable parameter (see UDEV(7)),
   3. the FOLDERSPEC arguments are of either of the forms: \`NAME@PATH' or
      \`NAME#PATH'; the first one specifies a shared folder referring to \`PATH' and
      being called \`NAME' inside the virtual machine, the second one is similar,
      except that it specifies a READ-ONLY folder.
+     Together with DEVPATHs, they're collectively referred to as ATTACHSPECs.
   4. You can use \`:vbhtName ACTION --help' to get detailed help for the given
      action.
 
@@ -794,7 +796,85 @@ Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
 # Outputs: main help text
 # Depends: print()
 showStartHelp() {
-  :
+print $"\
+Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]
+               [ --auto-attach ]    [ --no-auto-attach ]
+               [ --kbd-attach ]     [ --no-kbd-attach ]
+               [ --acpi-forward ]   [ --no-acpi-forward ]
+               [ --print-listener ] [ --no-print-listener ]
+               [ --new-X ]          [ --no-new-X ]
+               { DEVPATH | FOLDERSPEC ...}
+
+common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
+
+   or: vbht start { -h | --help }
+
+Launch, manage, query and stop VirtualBox(R) virtual machines in \`capturing'
+mode, thus effectively implementing \`kiosk mode', allowing for transparent
+printing, keyboard jailing, and USB auto-attachment.
+
+Action \`start' starts the virtual machine NAME or UUID in capturing mode, then
+it proceeds to attach every ATTACHSPEC given.
+
+      -A, --auto-attach        automatically attach USB devices plugged in
+                               during the operation of the virtual machine,
+                               additionally, allow them to be attached through
+                               vbht
+      -a, --no-auto-attach     do NOT automatically attach USB devices plugged
+                               in during the operation of the virtual machine,
+                               nor permit them to be attached through vbht
+      -K, --kbd-attach         try to attach USB keyboards
+      -k, --no-kbd-attach      do NOT try to attach USB keyboards
+      -F, --acpi-forward       forward ACPI power-button / sleep-button events
+                               to the virtual machine
+      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual
+                               machine
+      -P, --print-listener     run the print listening script
+      -p, --no-print-listener  do NOT run the print listening script
+      -X, --new-X              launch a fresh X server
+      -x, --no-new-X           do NOT launch a fresh X server
+
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      --  signal the end of options, lake the rest of the parameters literally
+
+      -h, --help  display this help and exit
+
+Environment variables: several environment variables, with the \`VBHT_' prefix,
+  are used to provide defaults: \`VBHT_AUTO_ATTACH', \`VBHT_ATTACH_KEYBOARD',
+  \`VBHT_ACPI_FORWARD', \`VBHT_LAUNCH_PRINT_LISTENER', \`VBHT_USE_NEW_X', can
+  take either the \`Y' or \`N' values and provide defaults for their corresponding
+  options; the \`VBHT_VERBOSITY' variable may take any integer number to be taken
+  as the default verbosity value (note, however, that values below 0 or above 6
+  will be ignored and truncated to that range).
+
+Examples (\`>' stands for the shell prompt):
+
+    > vbht start 'My VM' --no-print-listener --no-auto-attach
+
+    > vbht start 'My VM' /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7 home@~
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+
+NOTES:
+  1. if more than one conflicting option is given, the last one takes precedence
+     (this does NOT apply to verbosity options),
+  2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
+     replaceable parameter (see UDEV(7)),
+  3. the FOLDERSPEC arguments are of either of the forms: \`NAME@PATH' or
+     \`NAME#PATH'; the first one specifies a shared folder referring to \`PATH' and
+     being called \`NAME' inside the virtual machine, the second one is similar,
+     except that it specifies a READ-ONLY folder.
+     Together with DEVPATHs, they're collectively referred to as ATTACHSPECs.
+  4. You can use \`:vbhtName --help' to get more general help.
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+" "vbhtName:${0##*/}"
 }
 
 # Display the `attach' help message
@@ -804,7 +884,64 @@ showStartHelp() {
 # Outputs: main help text
 # Depends: print()
 showAttachHelp() {
-  :
+  print $"\
+Usage: vbht attach [ -f ] [ --force ] { DEVPATH | FOLDERSPEC ...}
+
+common options: [ -qv ] [ --quiet ] [ --verbose ] [--]
+
+   or: vbht attach { -h | --help }
+
+Launch, manage, query and stop VirtualBox(R) virtual machines in \`capturing'
+mode, thus effectively implementing \`kiosk mode', allowing for transparent
+printing, keyboard jailing, and USB auto-attachment.
+
+Action \`attach' attaches the (USB) devices found at each DEVPATH to the virtual
+machine currently running in capturing mode, or each FOLDERSPEC to its
+corresponding shared folder.
+
+      -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if
+                   the machine is not accepting auto attachments
+                   
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      --  signal the end of options, lake the rest of the parameters literally
+
+      -h, --help     display this help and exit
+
+Environment variables: several environment variables, with the \`VBHT_' prefix,
+  are used to provide defaults: \`VBHT_FORCE_ATTACH' can take either the \`Y' or
+  \`N' values and provides a default for its corresponding option; the
+  \`VBHT_VERBOSITY' variable may take any integer number to be taken as the
+  default verbosity value (note, however, that values below 0 or above 6 will be
+  ignored and truncated to that range).
+
+Examples (\`>' stands for the shell prompt):
+
+    > vbht attach /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7 home#~
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if no capturing virtual machines found.
+
+
+NOTES:
+  1. if more than one conflicting option is given (eg. more than one stop type),
+     the last one takes precedence (this does NOT apply to verbosity options),
+  2. the DEVPATH arguments have the same syntax as udev's \`\$devpath' or \`%p'
+     replaceable parameter (see UDEV(7)).
+  3. the FOLDERSPEC arguments are of either of the forms: \`NAME@PATH' or
+     \`NAME#PATH'; the first one specifies a shared folder referring to \`PATH' and
+     being called \`NAME' inside the virtual machine, the second one is similar,
+     except that it specifies a READ-ONLY folder.
+     Together with DEVPATHs, they're collectively referred to as ATTACHSPECs.
+  4. You can use \`:vbhtName --help' to get more general help.
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+" "vbhtName:${0##*/}"
 }
 
 # Display the `info' help message
@@ -814,7 +951,55 @@ showAttachHelp() {
 # Outputs: main help text
 # Depends: print()
 showInfoHelp() {
-  :
+  print $"\
+Usage: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]
+
+common options: [ -qv ] [ --quiet ] [ --verbose ]
+
+   or: vbht { -h | --help }
+
+Launch, manage, query and stop VirtualBox(R) virtual machines in \`capturing'
+mode, thus effectively implementing \`kiosk mode', allowing for transparent
+printing, keyboard jailing, and USB auto-attachment.
+
+Action \`info' returns information about the virtual machine currently running
+in capturing mode (if there's one such machine).
+
+      -M, --machine-readable     generate output in machine readable format
+      -m, --no-machine-readable  generate output in human readable format
+                   
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      -h, --help     display this help and exit
+
+Environment variables: several environment variables, with the \`VBHT_' prefix,
+  are used to provide defaults: \`VBHT_INFO_MACHINE_READABLE' can take either the
+  \`Y' or \`N' values and provides a default for its corresponding option; the
+  \`VBHT_VERBOSITY' variable may take any integer number to be taken as the default
+  verbosity value (note, however, that values below 0 or above 6 will be ignored
+  and truncated to that range).
+
+Examples (\`>' stands for the shell prompt):
+
+    > vbht info --machine-readable
+    12345:.67890:.01234567-89ab-cdef-0123-4567890abcde:.HASH:.N:.Y:.N:.Y:.Y
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if no capturing virtual machines found.
+
+
+NOTES:
+  1. if more than one conflicting option is given the last one takes precedence
+     (this does NOT apply to verbosity options),
+  4. You can use \`:vbhtName --help' to get more general help.
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+" "vbhtName:${0##*/}"
 }
 
 # Display the `logs' help message
@@ -824,7 +1009,65 @@ showInfoHelp() {
 # Outputs: main help text
 # Depends: print()
 showLogsHelp() {
-  :
+  print $"\
+Usage: vbht logs [ -FfEeWwIiDdSs ]
+               [ --show-fatal ]   [ --no-show-fatal ]
+               [ --show-error ]   [ --no-show-error ]
+               [ --show-warning ] [ --no-show-warning ]
+               [ --show-info ]    [ --no-show-info ]
+               [ --show-debug ]   [ --no-show-debug ]
+               [ --show-stderr ]  [ --no-show-stderr ]
+               { UUID | NAME | HASH | - ...}
+
+common options: [ -qv ] [ --quiet ] [ --verbose ]
+
+   or: vbht { -h | --help }
+
+Launch, manage, query and stop VirtualBox(R) virtual machines in \`capturing'
+mode, thus effectively implementing \`kiosk mode', allowing for transparent
+printing, keyboard jailing, and USB auto-attachment.
+
+Action \`logs' shows (coloured) log files for the given virtual machine, or for
+the currently running one, if there's one such and \`-' given.
+
+      -F, --show-fatal       show \`fatal' log lines
+      -f, --no-show-fatal    do NOT show \`fatal' log lines
+      -E, --show-error       show \`error' log lines
+      -e, --no-show-error    do NOT show \`error' log lines
+      -W, --show-warning     show \`warning' log lines
+      -w, --no-show-warning  do NOT show \`warning' log lines
+      -I, --show-info        show \`info' log lines
+      -i, --no-show-info     do NOT show \`info' log lines
+      -D, --show-debug       show \`debug' log lines
+      -d, --no-show-debug    do NOT show \`debug' log lines
+      -S, --show-stderr      show \`stderr' log lines
+      -s, --no-show-stderr   do NOT show \`stderr' log lines
+
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      -h, --help     display this help and exit
+
+Environment variables: several environment variables, with the \`VBHT_' prefix,
+  are used to provide defaults: the \`VBHT_VERBOSITY' variable may take any
+  integer number to be taken as the default verbosity value (note, however, that
+  values below 0 or above 6 will be ignored and truncated to that range).
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if no capturing virtual machines found.
+
+
+NOTES:
+  1. if more than one conflicting option is given the last one takes precedence
+     (this does NOT apply to verbosity options),
+  4. You can use \`:vbhtName --help' to get more general help.
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+" "vbhtName:${0##*/}"
 }
 
 # Display the `stop' help message
@@ -834,7 +1077,76 @@ showLogsHelp() {
 # Outputs: main help text
 # Depends: print()
 showStopHelp() {
-  :
+  print $"\
+Usage: vbht stop [ -aorsl ] [ -f ] [ --force ]
+               [ --acpi | --off | --reset | --save | --sleep ]
+
+common options: [ -qv ] [ --quiet ] [ --verbose ]
+
+   or: vbht { -h | --help }
+
+Launch, manage, query and stop VirtualBox(R) virtual machines in \`capturing'
+mode, thus effectively implementing \`kiosk mode', allowing for transparent
+printing, keyboard jailing, and USB auto-attachment.
+
+Action \`stop' stops the virtual machine currently running in capturing mode.
+
+      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine
+      -o, --off    turn the capturing virtual machine off
+      -r, --reset  reset the capturing virtual machine
+      -s, --save   save the capturing virtual machine's state
+      -l, --sleep  send ACPI sleep signal to the capturing virtual machine
+
+      -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if
+                   the machine is not accepting auto attachments
+                   OR
+                   force the ACPI event to be sent, even if the machine is not
+                   being forwarded ACPI events, ignored if stoppage type is
+                   not one of \`acpi' or \`sleep'
+                   
+      -q, --quiet    decrease by 1 the verbosity level
+      -v, --verbose  increase by 1 the verbosity level
+
+      -h, --help     display this help and exit
+
+Environment variables: several environment variables, with the \`VBHT_' prefix,
+  are used to provide defaults: \`VBHT_FORCE_STOP' can take either the \`Y' or
+  \`N' values and provides a default for its corresponding option; the
+  \`VBHT_STOP_METHOD' variable can take either one of the \`A', \`O', \`R', \`S',
+  \`L' values and each determines a stoppage type whose equivalence to the
+  options mentioned above is given by:
+
+      A  -a, --acpi
+      O  -o, --off
+      R  -r, --reset
+      S  -s, --save
+      L  -l, --sleep
+
+  last, the \`VBHT_VERBOSITY' variable may take any integer number to be taken
+  as the default verbosity value (note, however, that values below 0 or above 6
+  will be ignored and truncated to that range).
+
+Examples (\`>' stands for the shell prompt):
+
+    > vbht stop --acpi
+
+    > vbht stop -f --acpi
+
+Exit status:
+   0  if OK,
+   1  if syntax error,
+   2  if no capturing virtual machines found.
+
+
+NOTES:
+  1. if more than one conflicting option is given the last one takes precedence
+     (this does NOT apply to verbosity options),
+  4. You can use \`:vbhtName --help' to get more general help.
+
+
+Written by Mariano Perez Rodriguez.
+Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>
+" "vbhtName:${0##*/}"
 }
 
 
