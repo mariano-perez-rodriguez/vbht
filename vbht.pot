@@ -78,9 +78,9 @@ msgid ""
 "   or: vbht { -V | --version }\n"
 "   or: vbht { -L | --license }\n"
 "\n"
-"Launch VirtualBox(R) virtual machines in \\`capturing' mode, thus effectively\n"
-"implementing \\`kiosk mode', allowing for transparent printing, keyboard jailing,\n"
-"and USB auto-attachment.\n"
+"Launch, manage, query and stop VirtualBox(R) virtual machines in \\`capturing'\n"
+"mode, thus effectively implementing \\`kiosk mode', allowing for transparent\n"
+"printing, keyboard jailing, and USB auto-attachment.\n"
 "\n"
 "      -A, --auto-attach        automatically attach USB devices plugged in\n"
 "                               during the operation of the virtual machine,\n"
@@ -144,7 +144,8 @@ msgid ""
 "\n"
 "      start    start the virtual machine NAME or UUID in capturing mode\n"
 "      attach   attach the (USB) device found at each DEVPATH to the virtual\n"
-"               machine currently running in capturing mode\n"
+"               machine currently running in capturing mode, or each FOLDERSPEC\n"
+"               to its corresponding shared folder\n"
 "      info     return information about the virtual machine currently running\n"
 "               in capturing mode (if there's one such machine)\n"
 "      logs     show (coloured) log files for the given virtual machine, or for\n"
@@ -198,14 +199,15 @@ msgid ""
 "\n"
 "\n"
 "NOTES:\n"
-"  1. if more than one conflicting option is given (eg. more than one stop type),\n"
-"     the last one takes precedence (this does NOT apply to verbosity options),\n"
+"  1. if more than one conflicting option is given the last one takes precedence\n"
+"     (this does NOT apply to verbosity options),\n"
 "  2. the DEVPATH arguments have the same syntax as udev's \\`\\$devpath' or \\`%p'\n"
-"     replaceable parameter (see UDEV(7)).\n"
+"     replaceable parameter (see UDEV(7)),\n"
 "  3. the FOLDERSPEC arguments are of either of the forms: \\`NAME@PATH' or\n"
 "     \\`NAME#PATH'; the first one specifies a shared folder referring to \\`PATH' and\n"
 "     being called \\`NAME' inside the virtual machine, the second one is similar,\n"
 "     except that it specifies a READ-ONLY folder.\n"
+"     Together with DEVPATHs, they're collectively referred to as ATTACHSPECs.\n"
 "  4. You can use \\`:vbhtName ACTION --help' to get detailed help for the given\n"
 "     action.\n"
 "\n"
@@ -214,7 +216,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:778
+#: vbht:780
 msgid ""
 "vbht 0.3\n"
 "Copyright (C) 2012 Mariano Perez Rodriguez\n"
@@ -226,198 +228,523 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:873
-msgid "invalid virtual machine specification! -- \\`:specification'"
+#: vbht:799
+msgid ""
+"Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\n"
+"               [ --auto-attach ]    [ --no-auto-attach ]\n"
+"               [ --kbd-attach ]     [ --no-kbd-attach ]\n"
+"               [ --acpi-forward ]   [ --no-acpi-forward ]\n"
+"               [ --print-listener ] [ --no-print-listener ]\n"
+"               [ --new-X ]          [ --no-new-X ]\n"
+"               { DEVPATH | FOLDERSPEC ...}\n"
+"\n"
+"common options: [ -qv ] [ --quiet ] [ --verbose ] [--]\n"
+"\n"
+"   or: vbht start { -h | --help }\n"
+"\n"
+"Launch, manage, query and stop VirtualBox(R) virtual machines in \\`capturing'\n"
+"mode, thus effectively implementing \\`kiosk mode', allowing for transparent\n"
+"printing, keyboard jailing, and USB auto-attachment.\n"
+"\n"
+"Action \\`start' starts the virtual machine NAME or UUID in capturing mode, then\n"
+"it proceeds to attach every ATTACHSPEC given.\n"
+"\n"
+"      -A, --auto-attach        automatically attach USB devices plugged in\n"
+"                               during the operation of the virtual machine,\n"
+"                               additionally, allow them to be attached through\n"
+"                               vbht\n"
+"      -a, --no-auto-attach     do NOT automatically attach USB devices plugged\n"
+"                               in during the operation of the virtual machine,\n"
+"                               nor permit them to be attached through vbht\n"
+"      -K, --kbd-attach         try to attach USB keyboards\n"
+"      -k, --no-kbd-attach      do NOT try to attach USB keyboards\n"
+"      -F, --acpi-forward       forward ACPI power-button / sleep-button events\n"
+"                               to the virtual machine\n"
+"      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual\n"
+"                               machine\n"
+"      -P, --print-listener     run the print listening script\n"
+"      -p, --no-print-listener  do NOT run the print listening script\n"
+"      -X, --new-X              launch a fresh X server\n"
+"      -x, --no-new-X           do NOT launch a fresh X server\n"
+"\n"
+"      -q, --quiet    decrease by 1 the verbosity level\n"
+"      -v, --verbose  increase by 1 the verbosity level\n"
+"\n"
+"      --  signal the end of options, lake the rest of the parameters literally\n"
+"\n"
+"      -h, --help  display this help and exit\n"
+"\n"
+"Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
+"  are used to provide defaults: \\`VBHT_AUTO_ATTACH', \\`VBHT_ATTACH_KEYBOARD',\n"
+"  \\`VBHT_ACPI_FORWARD', \\`VBHT_LAUNCH_PRINT_LISTENER', \\`VBHT_USE_NEW_X', can\n"
+"  take either the \\`Y' or \\`N' values and provide defaults for their corresponding\n"
+"  options; the \\`VBHT_VERBOSITY' variable may take any integer number to be taken\n"
+"  as the default verbosity value (note, however, that values below 0 or above 6\n"
+"  will be ignored and truncated to that range).\n"
+"\n"
+"Examples (\\`>' stands for the shell prompt):\n"
+"\n"
+"    > vbht start 'My VM' --no-print-listener --no-auto-attach\n"
+"\n"
+"    > vbht start 'My VM' /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7 home@~\n"
+"\n"
+"Exit status:\n"
+"   0  if OK,\n"
+"   1  if syntax error,\n"
+"\n"
+"NOTES:\n"
+"  1. if more than one conflicting option is given, the last one takes precedence\n"
+"     (this does NOT apply to verbosity options),\n"
+"  2. the DEVPATH arguments have the same syntax as udev's \\`\\$devpath' or \\`%p'\n"
+"     replaceable parameter (see UDEV(7)),\n"
+"  3. the FOLDERSPEC arguments are of either of the forms: \\`NAME@PATH' or\n"
+"     \\`NAME#PATH'; the first one specifies a shared folder referring to \\`PATH' and\n"
+"     being called \\`NAME' inside the virtual machine, the second one is similar,\n"
+"     except that it specifies a READ-ONLY folder.\n"
+"     Together with DEVPATHs, they're collectively referred to as ATTACHSPECs.\n"
+"  4. You can use \\`:vbhtName --help' to get more general help.\n"
+"\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:878
-msgid "another process is holding the lock with PID :lockingPID!"
+#: vbht:887
+msgid ""
+"Usage: vbht attach [ -f ] [ --force ] { DEVPATH | FOLDERSPEC ...}\n"
+"\n"
+"common options: [ -qv ] [ --quiet ] [ --verbose ] [--]\n"
+"\n"
+"   or: vbht attach { -h | --help }\n"
+"\n"
+"Launch, manage, query and stop VirtualBox(R) virtual machines in \\`capturing'\n"
+"mode, thus effectively implementing \\`kiosk mode', allowing for transparent\n"
+"printing, keyboard jailing, and USB auto-attachment.\n"
+"\n"
+"Action \\`attach' attaches the (USB) devices found at each DEVPATH to the virtual\n"
+"machine currently running in capturing mode, or each FOLDERSPEC to its\n"
+"corresponding shared folder.\n"
+"\n"
+"      -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if\n"
+"                   the machine is not accepting auto attachments\n"
+"                   \n"
+"      -q, --quiet    decrease by 1 the verbosity level\n"
+"      -v, --verbose  increase by 1 the verbosity level\n"
+"\n"
+"      --  signal the end of options, lake the rest of the parameters literally\n"
+"\n"
+"      -h, --help     display this help and exit\n"
+"\n"
+"Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
+"  are used to provide defaults: \\`VBHT_FORCE_ATTACH' can take either the \\`Y' or\n"
+"  \\`N' values and provides a default for its corresponding option; the\n"
+"  \\`VBHT_VERBOSITY' variable may take any integer number to be taken as the\n"
+"  default verbosity value (note, however, that values below 0 or above 6 will be\n"
+"  ignored and truncated to that range).\n"
+"\n"
+"Examples (\\`>' stands for the shell prompt):\n"
+"\n"
+"    > vbht attach /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7 home#~\n"
+"\n"
+"Exit status:\n"
+"   0  if OK,\n"
+"   1  if syntax error,\n"
+"   2  if no capturing virtual machines found.\n"
+"\n"
+"\n"
+"NOTES:\n"
+"  1. if more than one conflicting option is given (eg. more than one stop type),\n"
+"     the last one takes precedence (this does NOT apply to verbosity options),\n"
+"  2. the DEVPATH arguments have the same syntax as udev's \\`\\$devpath' or \\`%p'\n"
+"     replaceable parameter (see UDEV(7)).\n"
+"  3. the FOLDERSPEC arguments are of either of the forms: \\`NAME@PATH' or\n"
+"     \\`NAME#PATH'; the first one specifies a shared folder referring to \\`PATH' and\n"
+"     being called \\`NAME' inside the virtual machine, the second one is similar,\n"
+"     except that it specifies a READ-ONLY folder.\n"
+"     Together with DEVPATHs, they're collectively referred to as ATTACHSPECs.\n"
+"  4. You can use \\`:vbhtName --help' to get more general help.\n"
+"\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:884
-msgid "setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!"
+#: vbht:954
+msgid ""
+"Usage: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]\n"
+"\n"
+"common options: [ -qv ] [ --quiet ] [ --verbose ]\n"
+"\n"
+"   or: vbht { -h | --help }\n"
+"\n"
+"Launch, manage, query and stop VirtualBox(R) virtual machines in \\`capturing'\n"
+"mode, thus effectively implementing \\`kiosk mode', allowing for transparent\n"
+"printing, keyboard jailing, and USB auto-attachment.\n"
+"\n"
+"Action \\`info' returns information about the virtual machine currently running\n"
+"in capturing mode (if there's one such machine).\n"
+"\n"
+"      -M, --machine-readable     generate output in machine readable format\n"
+"      -m, --no-machine-readable  generate output in human readable format\n"
+"                   \n"
+"      -q, --quiet    decrease by 1 the verbosity level\n"
+"      -v, --verbose  increase by 1 the verbosity level\n"
+"\n"
+"      -h, --help     display this help and exit\n"
+"\n"
+"Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
+"  are used to provide defaults: \\`VBHT_INFO_MACHINE_READABLE' can take either the\n"
+"  \\`Y' or \\`N' values and provides a default for its corresponding option; the\n"
+"  \\`VBHT_VERBOSITY' variable may take any integer number to be taken as the default\n"
+"  verbosity value (note, however, that values below 0 or above 6 will be ignored\n"
+"  and truncated to that range).\n"
+"\n"
+"Examples (\\`>' stands for the shell prompt):\n"
+"\n"
+"    > vbht info --machine-readable\n"
+"    12345:.67890:.01234567-89ab-cdef-0123-4567890abcde:.HASH:.N:.Y:.N:.Y:.Y\n"
+"\n"
+"Exit status:\n"
+"   0  if OK,\n"
+"   1  if syntax error,\n"
+"   2  if no capturing virtual machines found.\n"
+"\n"
+"\n"
+"NOTES:\n"
+"  1. if more than one conflicting option is given the last one takes precedence\n"
+"     (this does NOT apply to verbosity options),\n"
+"  4. You can use \\`:vbhtName --help' to get more general help.\n"
+"\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:906
-msgid "disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!"
-msgstr ""
-
-#: vbht:928
-msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
-msgstr ""
-
-#: vbht:938
-msgid "keyboard attachment failed for at least one device!"
-msgstr ""
-
-#: vbht:949
-msgid "re-enabling input devices failed, trying to re-enable them all!"
-msgstr ""
-
-#: vbht:950
-msgid "re-enabling all input devices failed!"
-msgstr ""
-
-#: vbht:959
-msgid "restoring ignored warnings returned non-zero (:status) status! -- \\`:warnings'"
-msgstr ""
-
-#: vbht:985 vbht:1170
-msgid "no capturing virtual machine running!"
-msgstr ""
-
-#: vbht:989
-msgid "the capturing virtual machine is not accepting attachments! -- try forcing"
-msgstr ""
-
-#: vbht:992 vbht:1173
-msgid "you're neither the capturing virtual machine's owner, nor root!"
-msgstr ""
-
-#: vbht:1008
-msgid "invalid shared folder path! -- \\`:path'"
-msgstr ""
-
-#: vbht:1016
-msgid "attaching shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
-msgstr ""
-
-#: vbht:1021
-msgid "attaching read-only shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
-msgstr ""
-
-#: vbht:1031
-msgid "invalid devpath! -- \\`:devpath'"
-msgstr ""
-
-#: vbht:1035
-msgid "attaching devpath \\`:devpath' at address \\`:address' returned non-zero (:status) status!"
-msgstr ""
-
-#: vbht:1065
-msgid "No vbht-managed virtual machine running!"
-msgstr ""
-
-#: vbht:1071
-msgid "Capturing virtual machine's launcher PID: [:vmPID]"
-msgstr ""
-
-#: vbht:1072
-msgid "Capturing virtual machine's launcher UID: [:vmUID]"
-msgstr ""
-
-#: vbht:1073
-msgid "Capturing virtual machine's UUID        : [:vmUUID]"
-msgstr ""
-
-#: vbht:1074
-msgid "Capturing virtual machine's RUNHASH     : [:runhash]"
-msgstr ""
-
-#: vbht:1076
-msgid "Auto-attachment    : [:autoAttach]"
-msgstr ""
-
-#: vbht:1077
-msgid "Keyboard attachment: [:attachKeyboard]"
-msgstr ""
-
-#: vbht:1078
-msgid "ACPI forwarding    : [:acpiForward]"
-msgstr ""
-
-#: vbht:1079
-msgid "Print-listener     : [:launchPrintListener]"
+#: vbht:1012
+msgid ""
+"Usage: vbht logs [ -FfEeWwIiDdSs ]\n"
+"               [ --show-fatal ]   [ --no-show-fatal ]\n"
+"               [ --show-error ]   [ --no-show-error ]\n"
+"               [ --show-warning ] [ --no-show-warning ]\n"
+"               [ --show-info ]    [ --no-show-info ]\n"
+"               [ --show-debug ]   [ --no-show-debug ]\n"
+"               [ --show-stderr ]  [ --no-show-stderr ]\n"
+"               { UUID | NAME | HASH | - ...}\n"
+"\n"
+"common options: [ -qv ] [ --quiet ] [ --verbose ]\n"
+"\n"
+"   or: vbht { -h | --help }\n"
+"\n"
+"Launch, manage, query and stop VirtualBox(R) virtual machines in \\`capturing'\n"
+"mode, thus effectively implementing \\`kiosk mode', allowing for transparent\n"
+"printing, keyboard jailing, and USB auto-attachment.\n"
+"\n"
+"Action \\`logs' shows (coloured) log files for the given virtual machine, or for\n"
+"the currently running one, if there's one such and \\`-' given.\n"
+"\n"
+"      -F, --show-fatal       show \\`fatal' log lines\n"
+"      -f, --no-show-fatal    do NOT show \\`fatal' log lines\n"
+"      -E, --show-error       show \\`error' log lines\n"
+"      -e, --no-show-error    do NOT show \\`error' log lines\n"
+"      -W, --show-warning     show \\`warning' log lines\n"
+"      -w, --no-show-warning  do NOT show \\`warning' log lines\n"
+"      -I, --show-info        show \\`info' log lines\n"
+"      -i, --no-show-info     do NOT show \\`info' log lines\n"
+"      -D, --show-debug       show \\`debug' log lines\n"
+"      -d, --no-show-debug    do NOT show \\`debug' log lines\n"
+"      -S, --show-stderr      show \\`stderr' log lines\n"
+"      -s, --no-show-stderr   do NOT show \\`stderr' log lines\n"
+"\n"
+"      -q, --quiet    decrease by 1 the verbosity level\n"
+"      -v, --verbose  increase by 1 the verbosity level\n"
+"\n"
+"      -h, --help     display this help and exit\n"
+"\n"
+"Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
+"  are used to provide defaults: the \\`VBHT_VERBOSITY' variable may take any\n"
+"  integer number to be taken as the default verbosity value (note, however, that\n"
+"  values below 0 or above 6 will be ignored and truncated to that range).\n"
+"\n"
+"Exit status:\n"
+"   0  if OK,\n"
+"   1  if syntax error,\n"
+"   2  if no capturing virtual machines found.\n"
+"\n"
+"\n"
+"NOTES:\n"
+"  1. if more than one conflicting option is given the last one takes precedence\n"
+"     (this does NOT apply to verbosity options),\n"
+"  4. You can use \\`:vbhtName --help' to get more general help.\n"
+"\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
 #: vbht:1080
+msgid ""
+"Usage: vbht stop [ -aorsl ] [ -f ] [ --force ]\n"
+"               [ --acpi | --off | --reset | --save | --sleep ]\n"
+"\n"
+"common options: [ -qv ] [ --quiet ] [ --verbose ]\n"
+"\n"
+"   or: vbht { -h | --help }\n"
+"\n"
+"Launch, manage, query and stop VirtualBox(R) virtual machines in \\`capturing'\n"
+"mode, thus effectively implementing \\`kiosk mode', allowing for transparent\n"
+"printing, keyboard jailing, and USB auto-attachment.\n"
+"\n"
+"Action \\`stop' stops the virtual machine currently running in capturing mode.\n"
+"\n"
+"      -a, --acpi   send ACPI poweroff signal to the capturing virtual machine\n"
+"      -o, --off    turn the capturing virtual machine off\n"
+"      -r, --reset  reset the capturing virtual machine\n"
+"      -s, --save   save the capturing virtual machine's state\n"
+"      -l, --sleep  send ACPI sleep signal to the capturing virtual machine\n"
+"\n"
+"      -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if\n"
+"                   the machine is not accepting auto attachments\n"
+"                   OR\n"
+"                   force the ACPI event to be sent, even if the machine is not\n"
+"                   being forwarded ACPI events, ignored if stoppage type is\n"
+"                   not one of \\`acpi' or \\`sleep'\n"
+"                   \n"
+"      -q, --quiet    decrease by 1 the verbosity level\n"
+"      -v, --verbose  increase by 1 the verbosity level\n"
+"\n"
+"      -h, --help     display this help and exit\n"
+"\n"
+"Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
+"  are used to provide defaults: \\`VBHT_FORCE_STOP' can take either the \\`Y' or\n"
+"  \\`N' values and provides a default for its corresponding option; the\n"
+"  \\`VBHT_STOP_METHOD' variable can take either one of the \\`A', \\`O', \\`R', \\`S',\n"
+"  \\`L' values and each determines a stoppage type whose equivalence to the\n"
+"  options mentioned above is given by:\n"
+"\n"
+"      A  -a, --acpi\n"
+"      O  -o, --off\n"
+"      R  -r, --reset\n"
+"      S  -s, --save\n"
+"      L  -l, --sleep\n"
+"\n"
+"  last, the \\`VBHT_VERBOSITY' variable may take any integer number to be taken\n"
+"  as the default verbosity value (note, however, that values below 0 or above 6\n"
+"  will be ignored and truncated to that range).\n"
+"\n"
+"Examples (\\`>' stands for the shell prompt):\n"
+"\n"
+"    > vbht stop --acpi\n"
+"\n"
+"    > vbht stop -f --acpi\n"
+"\n"
+"Exit status:\n"
+"   0  if OK,\n"
+"   1  if syntax error,\n"
+"   2  if no capturing virtual machines found.\n"
+"\n"
+"\n"
+"NOTES:\n"
+"  1. if more than one conflicting option is given the last one takes precedence\n"
+"     (this does NOT apply to verbosity options),\n"
+"  4. You can use \\`:vbhtName --help' to get more general help.\n"
+"\n"
+"\n"
+"Written by Mariano Perez Rodriguez.\n"
+"Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
+msgstr ""
+
+#: vbht:1185
+msgid "invalid virtual machine specification! -- \\`:specification'"
+msgstr ""
+
+#: vbht:1190
+msgid "another process is holding the lock with PID :lockingPID!"
+msgstr ""
+
+#: vbht:1196
+msgid "setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!"
+msgstr ""
+
+#: vbht:1218
+msgid "disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!"
+msgstr ""
+
+#: vbht:1240
+msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
+msgstr ""
+
+#: vbht:1250
+msgid "keyboard attachment failed for at least one device!"
+msgstr ""
+
+#: vbht:1261
+msgid "re-enabling input devices failed, trying to re-enable them all!"
+msgstr ""
+
+#: vbht:1262
+msgid "re-enabling all input devices failed!"
+msgstr ""
+
+#: vbht:1271
+msgid "restoring ignored warnings returned non-zero (:status) status! -- \\`:warnings'"
+msgstr ""
+
+#: vbht:1297 vbht:1482
+msgid "no capturing virtual machine running!"
+msgstr ""
+
+#: vbht:1301
+msgid "the capturing virtual machine is not accepting attachments! -- try forcing"
+msgstr ""
+
+#: vbht:1304 vbht:1485
+msgid "you're neither the capturing virtual machine's owner, nor root!"
+msgstr ""
+
+#: vbht:1320
+msgid "invalid shared folder path! -- \\`:path'"
+msgstr ""
+
+#: vbht:1328
+msgid "attaching shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
+msgstr ""
+
+#: vbht:1333
+msgid "attaching read-only shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
+msgstr ""
+
+#: vbht:1343
+msgid "invalid devpath! -- \\`:devpath'"
+msgstr ""
+
+#: vbht:1347
+msgid "attaching devpath \\`:devpath' at address \\`:address' returned non-zero (:status) status!"
+msgstr ""
+
+#: vbht:1377
+msgid "No vbht-managed virtual machine running!"
+msgstr ""
+
+#: vbht:1383
+msgid "Capturing virtual machine's launcher PID: [:vmPID]"
+msgstr ""
+
+#: vbht:1384
+msgid "Capturing virtual machine's launcher UID: [:vmUID]"
+msgstr ""
+
+#: vbht:1385
+msgid "Capturing virtual machine's UUID        : [:vmUUID]"
+msgstr ""
+
+#: vbht:1386
+msgid "Capturing virtual machine's RUNHASH     : [:runhash]"
+msgstr ""
+
+#: vbht:1388
+msgid "Auto-attachment    : [:autoAttach]"
+msgstr ""
+
+#: vbht:1389
+msgid "Keyboard attachment: [:attachKeyboard]"
+msgstr ""
+
+#: vbht:1390
+msgid "ACPI forwarding    : [:acpiForward]"
+msgstr ""
+
+#: vbht:1391
+msgid "Print-listener     : [:launchPrintListener]"
+msgstr ""
+
+#: vbht:1392
 msgid "Dedicated X server : [:useNewX]"
 msgstr ""
 
-#: vbht:1166
+#: vbht:1478
 msgid "forcing option will be ignored for stoppage type \\`:stoppageType'"
 msgstr ""
 
-#: vbht:1177
+#: vbht:1489
 msgid "the capturing virtual machine is not being forwarded ACPI events! -- try forcing"
 msgstr ""
 
-#: vbht:1189
+#: vbht:1501
 msgid "invalid stoppage type! -- \\`:stoppage'"
 msgstr ""
 
-#: vbht:1195
+#: vbht:1507
 msgid "stoppage returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1492
+#: vbht:1804
 msgid "VBHT started"
 msgstr ""
 
-#: vbht:1495
+#: vbht:1807
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:1501 vbht:1546 vbht:1604 vbht:1656 vbht:1709 vbht:1772
+#: vbht:1813 vbht:1858 vbht:1916 vbht:1968 vbht:2021 vbht:2084
 msgid "\\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1509
+#: vbht:1821
 msgid "\\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1517
+#: vbht:1829
 msgid "\\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1526 vbht:1590
+#: vbht:1838 vbht:1902
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:1567 vbht:1622 vbht:1671 vbht:1733 vbht:1793
+#: vbht:1879 vbht:1934 vbht:1983 vbht:2045 vbht:2105
 msgid "\\`-h' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1571 vbht:1626 vbht:1675 vbht:1737 vbht:1797
+#: vbht:1883 vbht:1938 vbht:1987 vbht:2049 vbht:2109
 msgid "invalid option at \\`:longOption'! -- \\`:shortOption'"
 msgstr ""
 
-#: vbht:1682 vbht:1804
+#: vbht:1994 vbht:2116
 msgid "invalid option! -- \\`:option'"
 msgstr ""
 
-#: vbht:1812
+#: vbht:2124
 msgid "invalid action! -- \\`:action'"
 msgstr ""
 
-#: vbht:1819
+#: vbht:2131
 msgid "Try \\`:vbhtName start --help' for more information."
 msgstr ""
 
-#: vbht:1820
+#: vbht:2132
 msgid "Try \\`:vbhtName attach --help' for more information."
 msgstr ""
 
-#: vbht:1821
+#: vbht:2133
 msgid "Try \\`:vbhtName info --help' for more information."
 msgstr ""
 
-#: vbht:1822
+#: vbht:2134
 msgid "Try \\`:vbhtName logs --help' for more information."
 msgstr ""
 
-#: vbht:1823
+#: vbht:2135
 msgid "Try \\`:vbhtName stop --help' for more information."
 msgstr ""
 
-#: vbht:1825
+#: vbht:2137
 msgid "Try \\`:vbhtName --help' for more information."
 msgstr ""
 
-#: vbht:1850
+#: vbht:2162
 msgid "something went very wrong! late-unrecognised action: \\`:action'!"
 msgstr ""
 
-#: vbht:1858
+#: vbht:2170
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
