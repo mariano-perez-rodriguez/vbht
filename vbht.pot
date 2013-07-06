@@ -226,7 +226,7 @@ msgstr ""
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:1122 vbht:1167 vbht:1223 vbht:1273 vbht:1326 vbht:1398
+#: vbht:1122 vbht:1167 vbht:1223 vbht:1273 vbht:1326 vbht:1389
 msgid "\\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
@@ -242,158 +242,158 @@ msgstr ""
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:1188 vbht:1239 vbht:1288 vbht:1350 vbht:1419
+#: vbht:1188 vbht:1239 vbht:1288 vbht:1350 vbht:1410
 msgid "\\`-h' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1192 vbht:1243 vbht:1292 vbht:1361 vbht:1423
+#: vbht:1192 vbht:1243 vbht:1292 vbht:1354 vbht:1414
 msgid "invalid option at \\`:longOption'! -- \\`:shortOption'"
 msgstr ""
 
-#: vbht:1199 vbht:1250 vbht:1299 vbht:1430
+#: vbht:1299 vbht:1421
 msgid "invalid option! -- \\`:option'"
 msgstr ""
 
-#: vbht:1438
+#: vbht:1429
 msgid "invalid action! -- \\`:action'"
 msgstr ""
 
-#: vbht:1445
+#: vbht:1436
 msgid "Try \\`:vbhtName start --help' for more information."
 msgstr ""
 
-#: vbht:1446
+#: vbht:1437
 msgid "Try \\`:vbhtName attach --help' for more information."
 msgstr ""
 
-#: vbht:1447
+#: vbht:1438
 msgid "Try \\`:vbhtName info --help' for more information."
 msgstr ""
 
-#: vbht:1448
+#: vbht:1439
 msgid "Try \\`:vbhtName logs --help' for more information."
 msgstr ""
 
-#: vbht:1449
+#: vbht:1440
 msgid "Try \\`:vbhtName stop --help' for more information."
 msgstr ""
 
-#: vbht:1451
+#: vbht:1442
 msgid "Try \\`:vbhtName --help' for more information."
 msgstr ""
 
-#: vbht:1490
+#: vbht:1481
 msgid "invalid virtual machine specification! -- \\`:specification'"
 msgstr ""
 
-#: vbht:1495
+#: vbht:1486
 msgid "another process is holding the lock with PID :lockingPID!"
 msgstr ""
 
-#: vbht:1501
+#: vbht:1492
 msgid "setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!"
 msgstr ""
 
-#: vbht:1523
+#: vbht:1514
 msgid "disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!"
 msgstr ""
 
-#: vbht:1545
+#: vbht:1536
 msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
 msgstr ""
 
-#: vbht:1555
+#: vbht:1546
 msgid "keyboard attachment failed for at least one device!"
 msgstr ""
 
-#: vbht:1563 vbht:1625
+#: vbht:1554 vbht:1616
 msgid "invalid devpath! -- \\`:devpath'"
 msgstr ""
 
-#: vbht:1567 vbht:1629
+#: vbht:1558 vbht:1620
 msgid "attaching devpath \\`:devpath' at address \\`:address' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1579
+#: vbht:1570
 msgid "re-enabling input devices failed, trying to re-enable them all!"
 msgstr ""
 
-#: vbht:1580
+#: vbht:1571
 msgid "re-enabling all input devices failed!"
 msgstr ""
 
-#: vbht:1589
+#: vbht:1580
 msgid "restoring ignored warnings returned non-zero (:status) status! -- \\`:warnings'"
 msgstr ""
 
-#: vbht:1607 vbht:1742
+#: vbht:1598 vbht:1733
 msgid "no capturing virtual machine running!"
 msgstr ""
 
-#: vbht:1610
+#: vbht:1601
 msgid "the capturing virtual machine does not accept attachments!"
 msgstr ""
 
-#: vbht:1613 vbht:1745
+#: vbht:1604 vbht:1736
 msgid "you're neither the capturing virtual machine's owner, nor root!"
 msgstr ""
 
-#: vbht:1650
+#: vbht:1641
 msgid "No vbht-managed virtual machine running!"
 msgstr ""
 
-#: vbht:1656
+#: vbht:1647
 msgid "Capturing virtual machine's launcher PID: [:vmPID]"
 msgstr ""
 
-#: vbht:1657
+#: vbht:1648
 msgid "Capturing virtual machine's launcher UID: [:vmUID]"
 msgstr ""
 
-#: vbht:1658
+#: vbht:1649
 msgid "Capturing virtual machine's UUID        : [:vmUUID]"
 msgstr ""
 
-#: vbht:1659
+#: vbht:1650
 msgid "Capturing virtual machine's RUNHASH     : [:runhash]"
 msgstr ""
 
-#: vbht:1661
+#: vbht:1652
 msgid "Auto-attachment    : [:autoAttach]"
 msgstr ""
 
-#: vbht:1662
+#: vbht:1653
 msgid "Keyboard attachment: [:attachKeyboard]"
 msgstr ""
 
-#: vbht:1663
+#: vbht:1654
 msgid "ACPI forwarding    : [:acpiForward]"
 msgstr ""
 
-#: vbht:1664
+#: vbht:1655
 msgid "Print-listener     : [:launchPrintListener]"
 msgstr ""
 
-#: vbht:1665
+#: vbht:1656
 msgid "Dedicated X server : [:useNewX]"
 msgstr ""
 
-#: vbht:1738
+#: vbht:1729
 msgid "forcing option will be ignored for stoppage type \\`:stoppageType'"
 msgstr ""
 
-#: vbht:1749
+#: vbht:1740
 msgid "the capturing virtual machine is not being forwarded ACPI events! -- try forcing"
 msgstr ""
 
-#: vbht:1761
+#: vbht:1752
 msgid "invalid stoppage type! -- \\`:stoppage'"
 msgstr ""
 
-#: vbht:1767
+#: vbht:1758
 msgid "stoppage returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1779
+#: vbht:1770
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
