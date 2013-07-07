@@ -173,7 +173,7 @@ getUUID() {
   local -r IFS=$'\n'
   # get the list of registered virtual machines, keep only matching names and/or
   # UUIDs, extract the UUIDs and eliminate duplicates
-  local -a temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' | sort -u))
+  local -a temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' | LC_ALL=C sort -u))
   # if the denomination is ambiguous, return failure
   if ! (( ${#temp[@]} == 1 )); then return 1; fi
   # remove redundant "{" and "}", echo it and return success
@@ -248,7 +248,7 @@ attachKbds() {
   # USB keyboard in question
   #
   # NB: the "for" is "safe" because there are no syspaths which contain IFS
-  for temp in $(find /sys/bus/usb/devices -execdir grep -sq '^usb:.*ic03isc..ip01$' '{}/modalias' ';' -execdir readlink -e '{}/..' ';' | sort -u); do
+  for temp in $(find /sys/bus/usb/devices -execdir grep -sq '^usb:.*ic03isc..ip01$' '{}/modalias' ';' -execdir readlink -e '{}/..' ';' | LC_ALL=C sort -u); do
     # try to get address (ignore errors, we'll check output)
     temp="$(devpath2address "${temp}")" ||:
     # if we got a valid address
@@ -275,7 +275,7 @@ getWarns() {
   # get VirtualBox(R)'s warnings (ignoring an unset property), strip the title,
   # turn the comma-separated list into a newline-separated list, remove empty
   # lines, sort it, and turn it back into a comma-separated list
-  local -r temp=$(vboxmanage getextradata global 'GUI/SuppressMessages' 2> "${ERRPIPE}" | grep -ve '^No value set!$' | cut -d' ' -f2 | tr ',[:space:]' $'\n' | grep . | sort -u | tr $'\n' ',')
+  local -r temp=$(vboxmanage getextradata global 'GUI/SuppressMessages' 2> "${ERRPIPE}" | grep -ve '^No value set!$' | cut -d' ' -f2 | tr ',[:space:]' $'\n' | grep . | LC_ALL=C sort -u | tr $'\n' ',')
   # remove final comma and echo it
   echo "${temp%,}"
 }
@@ -291,7 +291,7 @@ getWarns() {
 setWarns() {
   # turn the comma-separated list into a newline-separated list, remove empty
   # lines, sort it, and turn it back into a comma-separated list
-    local -r temp="$(tr ',[:space:]' $'\n' <<< "${*}" | grep . | sort -u | tr $'\n' ',')"
+    local -r temp="$(tr ',[:space:]' $'\n' <<< "${*}" | grep . | LC_ALL=C sort -u | tr $'\n' ',')"
   # set them
   vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> "${ERRPIPE}"
 }
@@ -381,7 +381,7 @@ disableKbdsMice() {
   if ! (( $# )); then
     # get the list slave keyboard and pointer XIDs, sort them, and
     # concatenate them into a comma-terminated list of XIDs
-    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -ve 'XTEST' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tr $'\n' ',')"
+    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -ve 'XTEST' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | LC_ALL=C sort -ug | tr $'\n' ',')"
     xids="${xids%,}"
   else
     # otherwise, just set xids
@@ -389,8 +389,8 @@ disableKbdsMice() {
   fi
   # sort the given XIDs, and, on the one hand, disable them, and on the
   # other concatenate them into a comma-terminated list of XIDs
-  # @DEBUG: xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 &> "${ERRPIPE}") | tr $'\n' ',')"
-  xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 &> "${ERRPIPE}") | tr $'\n' ',')"
+  # @DEBUG: xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | LC_ALL=C sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 0 &> "${ERRPIPE}") | tr $'\n' ',')"
+  xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | LC_ALL=C sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 0 &> "${ERRPIPE}") | tr $'\n' ',')"
   # output the list
   echo "${xids%,}"
 }
@@ -409,7 +409,7 @@ enableKbdsMice() {
   if ! (( $# )); then
     # get the list slave keyboard and pointer XIDs, sort them, and
     # concatenate them into a comma-terminated list of XIDs
-    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -ve 'XTEST' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | sort -ug | tr $'\n' ',')"
+    xids="$(xinput list 2> "${ERRPIPE}" | grep -e 'slave[[:space:]]\+keyboard' -e 'slave[[:space:]]\+pointer' | grep -ve 'XTEST' | grep -oe 'id=[[:digit:]]\+' | cut -d'=' -f2 | LC_ALL=C sort -ug | tr $'\n' ',')"
     xids="${xids%,}"
   else
     # otherwise, just set xids
@@ -417,8 +417,8 @@ enableKbdsMice() {
   fi
   # sort the given XIDs, and, on the one hand, enable them, and on the
   # other concatenate them into a comma-terminated list of XIDs
-  # @DEBUG: xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 &> "${ERRPIPE}") | tr $'\n' ',')"
-  xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 &> "${ERRPIPE}") | tr $'\n' ',')"
+  # @DEBUG: xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | LC_ALL=C sort -ug | tee >(xargs -rn1 -IX echo xinput set-prop 'X' 'Device Enabled' 1 &> "${ERRPIPE}") | tr $'\n' ',')"
+  xids="$(tr ',[:space:]' $'\n' <<< "${xids}" | grep . | LC_ALL=C sort -ug | tee >(xargs -rn1 -IX xinput set-prop 'X' 'Device Enabled' 1 &> "${ERRPIPE}") | tr $'\n' ',')"
   # output the list
   echo "${xids%,}"
 }

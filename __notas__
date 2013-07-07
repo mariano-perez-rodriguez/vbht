@@ -26,5 +26,3 @@ TODO:
 
 - agregar script de impresion configurable... tal vez configurable por carpeta de destino (con lo cual deberiamos poder poner mas de una)
   OJO, hacer seguimiento de (https://github.com/marianoperezrodriguez/vbht/issues/8)
-
-- ojo cuando se use "sort": justo antes hacer un "LC_ALL=C", para evitar quilombos de locale
