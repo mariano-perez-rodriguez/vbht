@@ -1,6 +1,18 @@
 TODO:
 
 - hacer una nueva "action" que muestre el log coloreado, si se le pasa una lista de RUNHASHes los va mostrando de a uno, si no busca la maquina que este corriendo ahora y muestra esa, por vmuuid o por vmname tambien, hacer que tome argumentos adicionales que digan que "niveles" mostrar (ie. --show-error, --no-show-error, --show-info, --no-show-info, etc), y OJO con que los logs pueden estar comprimidos.
+  cuando una maquina virtual se levanta, se agrega una linea de la forma:
+  <header> IDENT <RUNHASH>:<vmUUID>
+  al log, con esa linea se puede encontrar el RUNHASH asociado a un UUID (el UUID asociado a un nombre se puede encontrar con getUUID())
+
+  con un log tipo:
+
+[RE9kSmEtvOmz0Vwz|2013-07-06 20:23:27|O] IDENT RE9kSmEtvOmz0Vwz:0000UUID0000
+
+  el comando: grep -e '^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*' prueba | cut -d' ' -f4
+  da como resultado: RE9kSmEtvOmz0Vwz:0000UUID0000
+
+- agregar opcion a action "logs" para que muestre los mensajes con "severity" "other" ("O")
 
 - ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
 
@@ -11,3 +23,8 @@ TODO:
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
 - Bug: VBox has problems to habilitate the sleep (and hibernate) option under Windows.
+
+- agregar script de impresion configurable... tal vez configurable por carpeta de destino (con lo cual deberiamos poder poner mas de una)
+  OJO, hacer seguimiento de (https://github.com/marianoperezrodriguez/vbht/issues/8)
+
+- ojo cuando se use "sort": justo antes hacer un "LC_ALL=C", para evitar quilombos de locale
