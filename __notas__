@@ -7,9 +7,9 @@ TODO:
 
   con un log tipo:
 
-[RE9kSmEtvOmz0Vwz|2013-07-06 20:23:27|O] IDENT RE9kSmEtvOmz0Vwz:0000UUID0000
+[RE9kSmEtvOmz0Vwz|2013-07-06 20:23:27|O] IDENT RE9kSmEtvOmz0Vwz:0000UUID0000:NAME
 
-  el comando: grep -e '^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*' prueba | cut -d' ' -f4
+  el comando: grep -e '^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*:.*$' prueba | cut -d' ' -f4
   da como resultado: RE9kSmEtvOmz0Vwz:0000UUID0000
 
 - agregar opcion a action "logs" para que muestre los mensajes con "severity" "other" ("O")
