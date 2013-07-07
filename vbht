@@ -499,7 +499,7 @@ log() {
   else                                     sev_name='O'
   fi
   # build header
-  header="[${RUNHASH}-$(printf '%(%Y:%m:%d:%H:%M:%S:%z)T' -1)-${sev_name}]"
+  header="[${RUNHASH}|$(TZ= printf '%(%F %t)T' -1)|${sev_name}]"
 
   # treat each output line in turn
   while IFS= read -r line; do
@@ -1238,7 +1238,7 @@ doStart() {
       # in the background) and get its PID
       eval -- "${line}" & vbPID=$!
       # let the log know about this
-      logOtherSlnt "STARTED ${vmUUID}"
+      logOtherSlnt "IDENT ${RUNHASH}:${vmUUID}"
 
       # wait for the VM to become available, recover if it timed out
       if ! waitRunning "${vmUUID}"; then
