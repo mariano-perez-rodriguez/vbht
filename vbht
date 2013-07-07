@@ -161,7 +161,7 @@ verifyNeededCommands
 # -- VirtualBox(R) VM functions ------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# Get the UUID corresponding to either a name or a UUID
+# Get the UUID corresponding to either a name or an UUID
 #
 # Usage: getUUID { NAME | UUID }
 # Returns: 0 if successful, 1 if errors or none found
@@ -174,10 +174,29 @@ getUUID() {
   # get the list of registered virtual machines, keep only matching names and/or
   # UUIDs, extract the UUIDs and eliminate duplicates
   local -a temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' | LC_ALL=C sort -u))
-  # if the denomination is ambiguous, return failure
+  # if the denomination is ambiguous or empty, return failure
   if ! (( ${#temp[@]} == 1 )); then return 1; fi
   # remove redundant "{" and "}", echo it and return success
   local -r ret="${temp[0]%\}}"; echo "${ret#\{}"
+}
+
+# Get the NAME corresponding to either a name or an UUID
+#
+# Usage: getNAME { NAME | UUID }
+# Returns: 0 if successful, 1 if errors or none found
+# Outputs: NAME if found, empty otherwise
+# Depends: nothing
+getNAME() {
+  # use newline as the IFS, since newline is not a valid part of either the UUID
+  # nor the name of a VM
+  local -r IFS=$'\n'
+  # get the list of registered virtual machines, keep only matching names and/or
+  # UUIDs, extract the NAMEs and eliminate duplicates
+  local -a temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '^".*"' | LC_ALL=C sort -u))
+  # if the denomination is ambiguous or empty, return failure
+  if ! (( ${#temp[@]} == 1 )); then return 1; fi
+  # remove redundant '"'s, echo it and return success
+  local -r ret="${temp[0]%\"}"; echo "${ret#\"}"
 }
 
 # Get the address associated to a given USB devpath
@@ -532,6 +551,16 @@ logDebug()     { log ${SEV_DEBUG}      "$@"; }
 logStderr()    { log ${SEV_STDERR}     "$@"; }
 logOtherVerb() { log ${SEV_OTHER_VERB} "$@"; }
 logOtherSlnt() { log ${SEV_OTHER_SLNT} "$@"; }
+
+# Get the RUNHASH corresponding to either a NAME or an UUID
+#
+# Usage: getRUNHASH { NAME | UUID }
+# Returns: 0 if successful, 1 if errors or none found
+# Outputs: RUNHASHes separated by spaces if found, empty otherwise
+# Depends:
+getRUNHASH() {
+  
+}
 
 # ------------------------------------------------------------------------------
 # -- Duplex functions ----------------------------------------------------------
@@ -1189,6 +1218,8 @@ doStart() {
   # fail if not a valid virtual machine specification
   if ! [[ "${vmUUID}" ]]; then logError $"invalid virtual machine specification! -- \`:specification'" "specification:${temp}"; errors='X'
   else
+    # get the vmNAME (mask errors, we already know what we're getting)
+    vmNAME="$(getNAME "${vmUUID}")"
     # try to get lock (mask errors, we're going to check the output)
     lockingPID="$(getLock "${vmUID}" "${vmUUID}" "${RUNHASH}" "${auto_attach}" "${attach_keyboard}" "${acpi_forward}" "${launch_print_listener}" "${use_new_X}")" ||:
     # if there's another process using the lock, fail
@@ -1238,7 +1269,7 @@ doStart() {
       # in the background) and get its PID
       eval -- "${line}" & vbPID=$!
       # let the log know about this
-      logOtherSlnt "IDENT ${RUNHASH}:${vmUUID}"
+      logOtherSlnt "IDENT ${RUNHASH}:${vmUUID}:${vmNAME}"
 
       # wait for the VM to become available, recover if it timed out
       if ! waitRunning "${vmUUID}"; then
@@ -1734,6 +1765,8 @@ declare -i parameter_seen; (( parameter_seen = 1 ))
 declare -i vmUID=0
 # the UUID of the (to be) capturing VM
 declare -l vmUUID=''
+# the NAME of the (to be) capturing VM
+declare vmNAME=''
 
 # the PID of the process holding the lock
 declare -i lockingPID=0
