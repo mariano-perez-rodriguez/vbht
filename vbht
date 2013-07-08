@@ -497,6 +497,7 @@ exitTrap() {
 #          START_INFO, STOP_INFO, START_DEBUG, STOP_DEBUG, START_STDERR,
 #          STOP_STDERR, prevRUNHASH, RUNHASH, ERRPIPE
 log() {
+  local -r IFS=''
   # get severity (declare severity "name" too)
   local -ri severity="${1}"
   local -u  sev_name=''
@@ -521,7 +522,7 @@ log() {
   header="[${RUNHASH}|$(TZ= printf '%(%F %t)T' -1)|${sev_name}]"
 
   # treat each output line in turn
-  while IFS= read -r line; do
+  while read -r line; do
     # if verbosity mandates, show to stderr
     if (( severity <= verbosity )); then echo "${std_err} ${line}" >&2; fi
     # write to the log file
