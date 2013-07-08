@@ -10,19 +10,18 @@ TODO:
 [RE9kSmEtvOmz0Vwz|2013-07-06 20:23:27|O] IDENT RE9kSmEtvOmz0Vwz:0000UUID0000:NAME
 
   el comando: grep -e '^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*:.*$' prueba | cut -d' ' -f4
-  da como resultado: RE9kSmEtvOmz0Vwz:0000UUID0000
+  da como resultado: RE9kSmEtvOmz0Vwz:0000UUID0000:NAME
+
+  y el comando: grep -e '^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*:.*$' prueba | cut -d'|' -f2- | LC_ALL=C sort -u | cut -d' ' -f4 | cut -d':' -f2
+  da como resultado: 0000UUID0000
 
 - agregar opcion a action "logs" para que muestre los mensajes con "severity" "other" ("O")
-
-- ver como hacer para que pueda evitar forwardear un evento ACPI a VB (VB los forwardea por defecto al parecer y no esta claro como evitar que haga esto, con lo cual los switches "-f" o "--no-acpi-forward" no andan)
 
 - para recargar reglas de udev (SIN inotify, con lo cual funciona con links simbolicos... asumo)
   http://reactivated.net/writing_udev_rules.html
     ver "Testing and debugging > Putting your rules into action"
 
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
-
-- Bug: VBox has problems to habilitate the sleep (and hibernate) option under Windows.
 
 - agregar script de impresion configurable... tal vez configurable por carpeta de destino (con lo cual deberiamos poder poner mas de una)
   OJO, hacer seguimiento de (https://github.com/marianoperezrodriguez/vbht/issues/8)
