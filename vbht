@@ -1474,35 +1474,37 @@ doLogs() {
   if [[ "${show_stderr}"  == 'Y' ]]; then temp="${temp}S"; fi
 
   # process each descriptor in turn
-  # general idea:
-  # - each argument is first checked, and translated to a RUNHASH
-  #   (NAME / UUID / - descriptors are "dereferenced") and pushed
-  #   into an array for later processing
-  # - once there are no more arguments left, process the array in
-  #   question one item at a time using the severity pattern
   while (( $# )); do
     # check for "currently running machine" descriptor
     if [[ "${1}" == '-' ]]; then
-      # - go read the lock file
-      # - if there's no machine running, yell and be done with it
-      # - if there's a machine running, get the RUNHASH and push it
-      :
+      # try to read the lock file's line
+      if ! readLock _ _ address _ _ _ _ _ _; then logError $"no capturing virtual machine running!"; errors='X'; address=''; fi
     else
-      # this can either be a a machine's UUID, NAME, or HASH
-      # - ask getUUID() to look for a machine thus identified
-      # - if getUUID() failed, assume its a RUNHASH and push it,
-      # - otherwise, scan the logs to get all the RUNHASHes matching
-      #   the resulting UUID, push them all to the array
-      :
+      # otherwise, this can either be a a machine's UUID, NAME, or HASH
+      address="${1}"
     fi
-
+    # if we actually have an address to look up
+    if [[ "${address}" ]]; then
+      # ask getRUNHAS() to look for an entry (mask errors, we'll check for empty)
+      prevRUNHASH="$(getRUNHASH "${address}")" ||:
+      # if getRUNHASH() failed, yell and be done with it
+      if ! [[ "${prevRUNHASH}" ]]; then logError $"no log entry for descriptor \`${address}'!"; errors='X'; else
+        # using the severity pattern, show each to the user
+        zgrep -e '^\[${prevRUNHASH}\|.*\|[${temp}\]' | while IFS= read -r line; do
+          # format and output current line
+          #
+          #
+          #
+          : #@TODO: write formatting
+          #
+          #
+          #
+        done
+      fi
+    fi
     # shift the processed parameter out
     shift 1
   done
-
-  # the actual magic comes here: the array will be holding RUNHASHes
-  # into the logs; take each in turn and, using the severity pattern
-  # show each to the user.
 }
 
 # ------------------------------------------------------------------------------
@@ -1766,7 +1768,7 @@ declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-2} )) 2> /dev/null ||:
 # ------------------------------------------------------------------------------
 
 # whether a parameter for a given action has already been seen
-declare -i parameter_seen; (( parameter_seen = 1 ))
+declare -i parameter_seen; (( parameter_seen = 0 ))
 
 
 # ==============================================================================
@@ -1787,7 +1789,7 @@ declare -i vbPID=0
 # the PID of the (to be) capturing VM
 declare -i vmPID=0
 
-# the address of the (to be) attached USB device
+# the address of the (to be) attached USB device and, eventually, temps
 declare address=''
 # the name to be assigned to the (to be) created shared folder
 declare nameSF=''
@@ -1799,7 +1801,7 @@ declare warns=''
 # disabled input devices list
 declare indevs=''
 
-# used to construct evaluatable lines
+# used to construct evaluatable lines and, eventually, temps
 declare line=''
 # used to hold return values in general
 declare -i ret=0
