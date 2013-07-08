@@ -552,14 +552,25 @@ logStderr()    { log ${SEV_STDERR}     "$@"; }
 logOtherVerb() { log ${SEV_OTHER_VERB} "$@"; }
 logOtherSlnt() { log ${SEV_OTHER_SLNT} "$@"; }
 
-# Get the RUNHASH corresponding to either a NAME or an UUID
+# Get the RUNHASH corresponding to either a NAME, an UUID, or a RUNHASH
 #
-# Usage: getRUNHASH { NAME | UUID }
+# Usage: getRUNHASH { NAME | UUID | RUNHASH }
 # Returns: 0 if successful, 1 if errors or none found
-# Outputs: RUNHASHes separated by spaces if found, empty otherwise
+# Outputs: RUNHASHes separated by commas if found, empty otherwise
 # Depends:
 getRUNHASH() {
-  
+  # use newline as the IFS, since newline is not a valid part of either the UUID
+  # nor the name of a VM, nor a RUNHASH
+  local -r IFS=$'\n'
+  # zgrep all of the logs looking for the IDENT pattern, keep only matching lines,
+  # extract the RUNHASHes and eliminate duplicates
+  local temp="$(zgrep -e "'^\[[^]]\+\\\|O\] IDENT ${1}:[[:alnum:]]*:.*$'" \
+                      -e "'^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:${1}:.*$'" \
+                      -e "'^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*:${1}$'" "${LOGDIR}/*" | cut -d'|' -f2- | LC_ALL=C sort -u | cut -d' ' -f4 | cut -d':' -f1 | tr $'\n' ',')"
+  # if the denomination is empty, return failure
+  if ! [[ "${temp}" ]]; then return 1; fi
+  # remove final comma, echo it and return success
+  echo "${ret%,}"
 }
 
 # ------------------------------------------------------------------------------
