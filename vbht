@@ -1768,7 +1768,7 @@ declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-2} )) 2> /dev/null ||:
 # ------------------------------------------------------------------------------
 
 # whether a parameter for a given action has already been seen
-declare -i parameter_seen; (( parameter_seen = 0 ))
+declare -i parameter_seen; (( parameter_seen = 0 )) ||:
 
 
 # ==============================================================================
