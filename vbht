@@ -1490,7 +1490,7 @@ doLogs() {
       # if getRUNHASH() failed, yell and be done with it
       if ! [[ "${prevRUNHASH}" ]]; then logError $"no log entry for descriptor \`${address}'!"; errors='X'; else
         # using the severity pattern, show each to the user
-        zgrep -e '^\[${prevRUNHASH}\|.*\|[${temp}\]' | while IFS= read -r line; do
+        zgrep -e "'^\[${prevRUNHASH}\|.*\|[${temp}\]'" "${LOGDIR}/*" | while IFS= read -r line; do
           # format and output current line
           #
           #
