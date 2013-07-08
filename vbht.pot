@@ -18,39 +18,39 @@ msgstr ""
 msgid "At least bash version 4.2 is needed in order to run this script -- the detected version is \\`:major.:minor'"
 msgstr ""
 
-#: vbht:438
+#: vbht:457
 msgid "Running \\`:command' at \\`:function:.:line'"
 msgstr ""
 
-#: vbht:493
+#: vbht:512
 msgid "Fatal"
 msgstr ""
 
-#: vbht:494
+#: vbht:513
 msgid "Error"
 msgstr ""
 
-#: vbht:495
+#: vbht:514
 msgid "Warning"
 msgstr ""
 
-#: vbht:496
+#: vbht:515
 msgid "Info"
 msgstr ""
 
-#: vbht:497
+#: vbht:516
 msgid "Debug"
 msgstr ""
 
-#: vbht:498
+#: vbht:517
 msgid "Stderr"
 msgstr ""
 
-#: vbht:587
+#: vbht:627
 msgid "lpr returned non-zero (:status) status"
 msgstr ""
 
-#: vbht:612
+#: vbht:652
 msgid ""
 "Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\n"
 "               [ --auto-attach ]    [ --no-auto-attach ]\n"
@@ -216,7 +216,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:785
+#: vbht:825
 msgid ""
 "vbht 0.3\n"
 "Copyright (C) 2012 Mariano Perez Rodriguez\n"
@@ -228,7 +228,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:804
+#: vbht:844
 msgid ""
 "Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\n"
 "               [ --auto-attach ]    [ --no-auto-attach ]\n"
@@ -309,7 +309,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:892
+#: vbht:932
 msgid ""
 "Usage: vbht attach [ -f ] [ --force ] { DEVPATH | FOLDERSPEC ...}\n"
 "\n"
@@ -369,7 +369,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:959
+#: vbht:999
 msgid ""
 "Usage: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]\n"
 "\n"
@@ -420,7 +420,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1017
+#: vbht:1057
 msgid ""
 "Usage: vbht logs [ -FfEeWwIiDdSs ]\n"
 "               [ --show-fatal ]   [ --no-show-fatal ]\n"
@@ -481,7 +481,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1085
+#: vbht:1125
 msgid ""
 "Usage: vbht stop [ -aorsl ] [ -f ] [ --force ]\n"
 "               [ --acpi | --off | --reset | --save | --sleep ]\n"
@@ -553,198 +553,198 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1190
+#: vbht:1230
 msgid "invalid virtual machine specification! -- \\`:specification'"
 msgstr ""
 
-#: vbht:1195
+#: vbht:1237
 msgid "another process is holding the lock with PID :lockingPID!"
 msgstr ""
 
-#: vbht:1201
+#: vbht:1243
 msgid "setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!"
 msgstr ""
 
-#: vbht:1223
+#: vbht:1265
 msgid "disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!"
 msgstr ""
 
-#: vbht:1245
+#: vbht:1287
 msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
 msgstr ""
 
-#: vbht:1255
+#: vbht:1297
 msgid "keyboard attachment failed for at least one device!"
 msgstr ""
 
-#: vbht:1266
+#: vbht:1308
 msgid "re-enabling input devices failed, trying to re-enable them all!"
 msgstr ""
 
-#: vbht:1267
+#: vbht:1309
 msgid "re-enabling all input devices failed!"
 msgstr ""
 
-#: vbht:1276
+#: vbht:1318
 msgid "restoring ignored warnings returned non-zero (:status) status! -- \\`:warnings'"
 msgstr ""
 
-#: vbht:1302 vbht:1487
+#: vbht:1344 vbht:1529
 msgid "no capturing virtual machine running!"
 msgstr ""
 
-#: vbht:1306
+#: vbht:1348
 msgid "the capturing virtual machine is not accepting attachments! -- try forcing"
 msgstr ""
 
-#: vbht:1309 vbht:1490
+#: vbht:1351 vbht:1532
 msgid "you're neither the capturing virtual machine's owner, nor root!"
 msgstr ""
 
-#: vbht:1325
+#: vbht:1367
 msgid "invalid shared folder path! -- \\`:path'"
 msgstr ""
 
-#: vbht:1333
+#: vbht:1375
 msgid "attaching shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1338
+#: vbht:1380
 msgid "attaching read-only shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1348
+#: vbht:1390
 msgid "invalid devpath! -- \\`:devpath'"
 msgstr ""
 
-#: vbht:1352
+#: vbht:1394
 msgid "attaching devpath \\`:devpath' at address \\`:address' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1382
+#: vbht:1424
 msgid "No vbht-managed virtual machine running!"
 msgstr ""
 
-#: vbht:1388
+#: vbht:1430
 msgid "Capturing virtual machine's launcher PID: [:vmPID]"
 msgstr ""
 
-#: vbht:1389
+#: vbht:1431
 msgid "Capturing virtual machine's launcher UID: [:vmUID]"
 msgstr ""
 
-#: vbht:1390
+#: vbht:1432
 msgid "Capturing virtual machine's UUID        : [:vmUUID]"
 msgstr ""
 
-#: vbht:1391
+#: vbht:1433
 msgid "Capturing virtual machine's RUNHASH     : [:runhash]"
 msgstr ""
 
-#: vbht:1393
+#: vbht:1435
 msgid "Auto-attachment    : [:autoAttach]"
 msgstr ""
 
-#: vbht:1394
+#: vbht:1436
 msgid "Keyboard attachment: [:attachKeyboard]"
 msgstr ""
 
-#: vbht:1395
+#: vbht:1437
 msgid "ACPI forwarding    : [:acpiForward]"
 msgstr ""
 
-#: vbht:1396
+#: vbht:1438
 msgid "Print-listener     : [:launchPrintListener]"
 msgstr ""
 
-#: vbht:1397
+#: vbht:1439
 msgid "Dedicated X server : [:useNewX]"
 msgstr ""
 
-#: vbht:1483
+#: vbht:1525
 msgid "forcing option will be ignored for stoppage type \\`:stoppageType'"
 msgstr ""
 
-#: vbht:1494
+#: vbht:1536
 msgid "the capturing virtual machine is not being forwarded ACPI events! -- try forcing"
 msgstr ""
 
-#: vbht:1506
+#: vbht:1548
 msgid "invalid stoppage type! -- \\`:stoppage'"
 msgstr ""
 
-#: vbht:1512
+#: vbht:1554
 msgid "stoppage returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1809
+#: vbht:1853
 msgid "VBHT started"
 msgstr ""
 
-#: vbht:1812
+#: vbht:1856
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:1818 vbht:1863 vbht:1921 vbht:1973 vbht:2026 vbht:2089
+#: vbht:1862 vbht:1907 vbht:1965 vbht:2017 vbht:2070 vbht:2133
 msgid "\\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1826
+#: vbht:1870
 msgid "\\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1834
+#: vbht:1878
 msgid "\\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1843 vbht:1907
+#: vbht:1887 vbht:1951
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:1884 vbht:1939 vbht:1988 vbht:2050 vbht:2110
+#: vbht:1928 vbht:1983 vbht:2032 vbht:2094 vbht:2154
 msgid "\\`-h' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1888 vbht:1943 vbht:1992 vbht:2054 vbht:2114
+#: vbht:1932 vbht:1987 vbht:2036 vbht:2098 vbht:2158
 msgid "invalid option at \\`:longOption'! -- \\`:shortOption'"
 msgstr ""
 
-#: vbht:1999 vbht:2121
+#: vbht:2043 vbht:2165
 msgid "invalid option! -- \\`:option'"
 msgstr ""
 
-#: vbht:2129
+#: vbht:2173
 msgid "invalid action! -- \\`:action'"
 msgstr ""
 
-#: vbht:2136
+#: vbht:2180
 msgid "Try \\`:vbhtName start --help' for more information."
 msgstr ""
 
-#: vbht:2137
+#: vbht:2181
 msgid "Try \\`:vbhtName attach --help' for more information."
 msgstr ""
 
-#: vbht:2138
+#: vbht:2182
 msgid "Try \\`:vbhtName info --help' for more information."
 msgstr ""
 
-#: vbht:2139
+#: vbht:2183
 msgid "Try \\`:vbhtName logs --help' for more information."
 msgstr ""
 
-#: vbht:2140
+#: vbht:2184
 msgid "Try \\`:vbhtName stop --help' for more information."
 msgstr ""
 
-#: vbht:2142
+#: vbht:2186
 msgid "Try \\`:vbhtName --help' for more information."
 msgstr ""
 
-#: vbht:2167
+#: vbht:2211
 msgid "something went very wrong! late-unrecognised action: \\`:action'!"
 msgstr ""
 
-#: vbht:2175
+#: vbht:2219
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
