@@ -453,8 +453,13 @@ enableKbdsMice() {
 # Outputs: nothing
 # Depends: DO_TRAP_LOGGING, logDebug()
 debugTrap() {
-  if [[ "${DO_TRAP_LOGGING:-N}" != 'N' && "${2}" != 'log' && "${2}" != 'errListener' && "${2}" != 'exitTrap' ]]; then
-    logDebug $"Running \`:command' at \`:function:.:line'" "command:${1}" "function:${2:-main}" "line:${3}"
+  if [[ "${DO_TRAP_LOGGING:-N}" != 'N' ]]; then
+    case "${2}" in
+      'log'|'errListener'|'exitTrap'|'print'|'println')
+        :
+      ;;
+      *) logDebug $"Running \`:command' at \`:function:.:line'" "command:${1}" "function:${2:-main}" "line:${3}" ;;
+    esac
   fi
 }
 
@@ -499,24 +504,25 @@ log() {
   # set up temporaries
   local std_err=''
   local std_log=''
+  local term=''
   local lines="$(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
   local line=''
   local -i first_line=1
 
   # prepend severity type string to output line (don't do anything for
   # unrecognised severities) and build stderr and stdlog temporaries
-  if   (( severity == SEV_FATAL   )); then sev_name='F'; std_err="${START_FATAL}"$"Fatal"":${STOP_FATAL}"      ; std_log=$"Fatal"':'
-  elif (( severity == SEV_ERROR   )); then sev_name='E'; std_err="${START_ERROR}"$"Error"":${STOP_ERROR}"      ; std_log=$"Error"':'
-  elif (( severity == SEV_WARNING )); then sev_name='W'; std_err="${START_WARNING}"$"Warning"":${STOP_WARNING}"; std_log=$"Warning"':'
-  elif (( severity == SEV_INFO    )); then sev_name='I'; std_err="${START_INFO}"$"Info"":${STOP_INFO}"         ; std_log=$"Info"':'
-  elif (( severity == SEV_DEBUG   )); then sev_name='D'; std_err="${START_DEBUG}"$"Debug"":${STOP_DEBUG}"      ; std_log=$"Debug"':'
-  elif (( severity == SEV_STDERR  )); then sev_name='S'; std_err="${START_STDERR}"$"Stderr"":${STOP_STDERR}"   ; std_log=$"Stderr"':'
+  if   (( severity == SEV_FATAL   )); then sev_name='F'; std_err="${START_FATAL}"$"Fatal"":${STOP_FATAL}"      ; term="${START_FATAL}:${STOP_FATAL}"    ; std_log=$"Fatal"':'
+  elif (( severity == SEV_ERROR   )); then sev_name='E'; std_err="${START_ERROR}"$"Error"":${STOP_ERROR}"      ; term="${START_ERROR}:${STOP_ERROR}"    ; std_log=$"Error"':'
+  elif (( severity == SEV_WARNING )); then sev_name='W'; std_err="${START_WARNING}"$"Warning"":${STOP_WARNING}"; term="${START_WARNING}:${STOP_WARNING}"; std_log=$"Warning"':'
+  elif (( severity == SEV_INFO    )); then sev_name='I'; std_err="${START_INFO}"$"Info"":${STOP_INFO}"         ; term="${START_INFO}:${STOP_INFO}"      ; std_log=$"Info"':'
+  elif (( severity == SEV_DEBUG   )); then sev_name='D'; std_err="${START_DEBUG}"$"Debug"":${STOP_DEBUG}"      ; term="${START_DEBUG}:${STOP_DEBUG}"    ; std_log=$"Debug"':'
+  elif (( severity == SEV_STDERR  )); then sev_name='S'; std_err="${START_STDERR}"$"Stderr"":${STOP_STDERR}"   ; term="${START_STDERR}:${STOP_STDERR}"  ; std_log=$"Stderr"':'
   else                                     sev_name='O'
   fi
   # build header
   local -r header="[${RUNHASH}|$(TZ= printf '%(%F@%T)T' -1)|${sev_name}]"
   # build indent
-  local -r indent="${std_log//?/ }"
+  local indent="${std_log//?/ }"; indent="${indent:1}"; readonly indent
 
   # treat each output line in turn
   while read -r line; do
@@ -526,13 +532,13 @@ log() {
       if (( severity <= verbosity )); then echo "${std_err} ${line}" >&2; fi
       # write to the log file
       echo "${header} ${std_log} ${line}" >> "${LOGFILE}"
+      (( first_line = 0 )) ||:
     else
       # if verbosity mandates, show to stderr
-      if (( severity <= verbosity )); then echo "${indent}> ${line}" >&2; fi
+      if (( severity <= verbosity )); then echo "${indent}${term} ${line}" >&2; fi
       # write to the log file
-      echo "${header} ${indent}> ${line}" >> "${LOGFILE}"
+      echo "${header} ${indent}: ${line}" >> "${LOGFILE}"
       # reset `first_line' (mask errors, we don't care)
-      (( first_line = 0 )) ||:
     fi
   done <<< "${lines}"
 }
@@ -1683,7 +1689,7 @@ declare -u show_stderr='Y'
 
 # minimum severity to report to stderr (ignore errors in case VBHT_VERBOSITY
 # can't parse as integer)
-declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-2} )) 2> /dev/null ||:
+declare -i verbosity; (( verbosity = ${VBHT_VERBOSITY:-3} )) 2> /dev/null ||:
 
 # ------------------------------------------------------------------------------
 # -- Help display variables ----------------------------------------------------
@@ -1805,6 +1811,13 @@ else
       else
         # save the argument
         vmUUID="${2}"
+        # check for exceptional first argument
+        if [[ "${2}" == '--help' ]]; then
+          showStartHelp
+          # just be obnoxious about `--help' not being the only argument given :P
+          if (( $# != 2 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+          exit 0
+        fi
         # get optional arguments
         shift 2
         while (( $# )); do
@@ -1820,7 +1833,8 @@ else
             '--help')
               showStartHelp
               # just be obnoxious about `--help' not being the only argument given :P
-              if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+              # (NB: if we got this far, we have seen a VM name or UUID, so this message should always appear)
+              logWarning $"\`--help' is supposed to be the ONLY argument given!"
               exit 0
             ;;
             # check for end-of-options
