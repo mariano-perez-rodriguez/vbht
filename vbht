@@ -501,7 +501,7 @@ log() {
   local std_log=''
   local lines="$(print "${2}" "${@:3}" 2> "${ERRPIPE}")"
   local line=''
-  local header=''
+  local -i first_line=1
 
   # prepend severity type string to output line (don't do anything for
   # unrecognised severities) and build stderr and stdlog temporaries
@@ -514,14 +514,26 @@ log() {
   else                                     sev_name='O'
   fi
   # build header
-  header="[${RUNHASH}|$(TZ= printf '%(%F@%T)T' -1)|${sev_name}]"
+  local -r header="[${RUNHASH}|$(TZ= printf '%(%F@%T)T' -1)|${sev_name}]"
+  # build indent and prevent modification
+  local -r indent="${std_log//?/ }"
 
   # treat each output line in turn
   while read -r line; do
-    # if verbosity mandates, show to stderr
-    if (( severity <= verbosity )); then echo "${std_err} ${line}" >&2; fi
-    # write to the log file
-    echo "${header} ${std_log} ${line}" >> "${LOGFILE}"
+    # treat the first line differently
+    if (( first_line )); then
+      # if verbosity mandates, show to stderr
+      if (( severity <= verbosity )); then echo "${std_err} ${line}" >&2; fi
+      # write to the log file
+      echo "${header} ${std_log} ${line}" >> "${LOGFILE}"
+    else
+      # if verbosity mandates, show to stderr
+      if (( severity <= verbosity )); then echo "${indent}> ${line}" >&2; fi
+      # write to the log file
+      echo "${header} ${indent}> ${line}" >> "${LOGFILE}"
+      # reset `first_line' (mask errors, we don't care)
+      (( first_line = 0 )) ||:
+    fi
   done <<< "${lines}"
 }
 
