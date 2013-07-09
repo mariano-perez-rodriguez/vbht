@@ -515,7 +515,7 @@ log() {
   fi
   # build header
   local -r header="[${RUNHASH}|$(TZ= printf '%(%F@%T)T' -1)|${sev_name}]"
-  # build indent and prevent modification
+  # build indent
   local -r indent="${std_log//?/ }"
 
   # treat each output line in turn
