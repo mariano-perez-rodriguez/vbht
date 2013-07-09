@@ -519,7 +519,7 @@ log() {
   else                                     sev_name='O'
   fi
   # build header
-  header="[${RUNHASH}|$(TZ= printf '%(%F %t)T' -1)|${sev_name}]"
+  header="[${RUNHASH}|$(TZ= printf '%(%F %T)T' -1)|${sev_name}]"
 
   # treat each output line in turn
   while read -r line; do
