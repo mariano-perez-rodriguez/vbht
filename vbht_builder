@@ -200,8 +200,8 @@ tar -xJC "$tempdir" -f "$tempfile" 2> /dev/null
 # -- Final copying -------------------------------------------------------------
 
 # make backups
-mv -nT -- '/etc/acpi/powerbtn.sh' '/etc/acpi/pre-vbht-powerbtn.sh' 2> /dev/null
-mv -nT -- '/etc/acpi/sleepbtn.sh' '/etc/acpi/pre-vbht-sleepbtn.sh' 2> /dev/null
+if [[ -f '/etc/acpi/powerbtn.sh' ]]; then mv -nT -- '/etc/acpi/powerbtn.sh' '/etc/acpi/pre-vbht-powerbtn.sh' 2> /dev/null; fi
+if [[ -f '/etc/acpi/powerbtn.sh' ]]; then mv -nT -- '/etc/acpi/sleepbtn.sh' '/etc/acpi/pre-vbht-sleepbtn.sh' 2> /dev/null; fi
 
 # move files to their destinations
 #  - udev rules file to "/etc/udev/rules.d"

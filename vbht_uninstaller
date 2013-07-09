@@ -30,8 +30,8 @@ set -o errexit  # exit on ANY error
 if (( $UID )); then echo 'Error: this script MUST be run as root!' >&2; exit 1; fi
 
 # restore backups
-mv -fT -- '/etc/acpi/pre-vbht-powerbtn.sh' '/etc/acpi/powerbtn.sh' 2> /dev/null
-mv -fT -- '/etc/acpi/pre-vbht-sleepbtn.sh' '/etc/acpi/sleepbtn.sh' 2> /dev/null
+if [[ -f '/etc/acpi/pre-vbht-powerbtn.sh' ]]; then mv -fT -- '/etc/acpi/pre-vbht-powerbtn.sh' '/etc/acpi/powerbtn.sh' 2> /dev/null; else rm -f '/etc/acpi/powerbtn.sh' 2> /dev/null; fi
+if [[ -f '/etc/acpi/pre-vbht-sleepbtn.sh' ]]; then mv -fT -- '/etc/acpi/pre-vbht-sleepbtn.sh' '/etc/acpi/sleepbtn.sh' 2> /dev/null; else rm -f '/etc/acpi/sleepbtn.sh' 2> /dev/null; fi
 
 # remove every file added by the installer in a non-opt location
 rm -f -- '/etc/udev/rules.d/vbht.rules' 2> /dev/null
