@@ -22,42 +22,37 @@ msgstr ""
 msgid "Running \\`:command' at \\`:function:.:line'"
 msgstr ""
 
-#: vbht:512
+#: vbht:508
 msgid "Fatal"
 msgstr ""
 
-#: vbht:513
+#: vbht:509
 msgid "Error"
 msgstr ""
 
-#: vbht:514
+#: vbht:510
 msgid "Warning"
 msgstr ""
 
-#: vbht:515
+#: vbht:511
 msgid "Info"
 msgstr ""
 
-#: vbht:516
+#: vbht:512
 msgid "Debug"
 msgstr ""
 
-#: vbht:517
+#: vbht:513
 msgid "Stderr"
 msgstr ""
 
-#: vbht:628
-msgid "lpr returned non-zero (:status) status"
-msgstr ""
-
-#: vbht:653
+#: vbht:609
 msgid ""
 "Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\n"
-"               [ --auto-attach ]    [ --no-auto-attach ]\n"
-"               [ --kbd-attach ]     [ --no-kbd-attach ]\n"
-"               [ --acpi-forward ]   [ --no-acpi-forward ]\n"
-"               [ --print-listener ] [ --no-print-listener ]\n"
-"               [ --new-X ]          [ --no-new-X ]\n"
+"               [ --auto-attach ]  [ --no-auto-attach ]\n"
+"               [ --kbd-attach ]   [ --no-kbd-attach ]\n"
+"               [ --acpi-forward ] [ --no-acpi-forward ]\n"
+"               [ --new-X ]        [ --no-new-X ]\n"
 "               { DEVPATH | FOLDERSPEC ...}\n"
 "   or: vbht attach [ -f ] [ --force ] { DEVPATH | FOLDERSPEC ...}\n"
 "   or: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]\n"
@@ -95,8 +90,6 @@ msgid ""
 "                               to the virtual machine\n"
 "      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual\n"
 "                               machine\n"
-"      -P, --print-listener     run the print listening script\n"
-"      -p, --no-print-listener  do NOT run the print listening script\n"
 "      -X, --new-X              launch a fresh X server\n"
 "      -x, --no-new-X           do NOT launch a fresh X server\n"
 "\n"
@@ -164,12 +157,12 @@ msgid ""
 "\n"
 "Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
 "  are used to provide defaults: \\`VBHT_AUTO_ATTACH', \\`VBHT_ATTACH_KEYBOARD',\n"
-"  \\`VBHT_ACPI_FORWARD', \\`VBHT_LAUNCH_PRINT_LISTENER', \\`VBHT_USE_NEW_X',\n"
-"  \\`VBHT_INFO_MACHINE_READABLE', \\`VBHT_FORCE_STOP', and \\`VBHT_FORCE_ATTACH' can\n"
-"  take either the \\`Y' or \\`N' values and provide defaults for their corresponding\n"
-"  options; the \\`VBHT_STOP_METHOD' variable can take either one of the \\`A', \\`O',\n"
-"  \\`R', \\`S', \\`L' values and each determines a stoppage type whose equivalence to\n"
-"  the options mentioned above is given by:\n"
+"  \\`VBHT_ACPI_FORWARD', \\`VBHT_USE_NEW_X', \\`VBHT_INFO_MACHINE_READABLE',\n"
+"  \\`VBHT_FORCE_STOP', and \\`VBHT_FORCE_ATTACH' can take either the \\`Y' or \\`N'\n"
+"  values and provide defaults for their corresponding options; the\n"
+"  \\`VBHT_STOP_METHOD' variable can take either one of the \\`A', \\`O', \\`R', \\`S',\n"
+"  \\`L' values and each determines a stoppage type whose equivalence to the\n"
+"  options mentioned above is given by:\n"
 "\n"
 "      A  -a, --acpi\n"
 "      O  -o, --off\n"
@@ -183,7 +176,7 @@ msgid ""
 "\n"
 "Examples (\\`>' stands for the shell prompt):\n"
 "\n"
-"    > vbht start 'My VM' --no-print-listener --no-auto-attach\n"
+"    > vbht start 'My VM' --no-new-X --no-auto-attach\n"
 "\n"
 "    > vbht attach /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7\n"
 "\n"
@@ -216,7 +209,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:826
+#: vbht:779
 msgid ""
 "vbht 0.3\n"
 "Copyright (C) 2012 Mariano Perez Rodriguez\n"
@@ -228,14 +221,13 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:845
+#: vbht:798
 msgid ""
 "Usage: vbht start { UUID | NAME } [ -AaKkRrPpXx ]\n"
-"               [ --auto-attach ]    [ --no-auto-attach ]\n"
-"               [ --kbd-attach ]     [ --no-kbd-attach ]\n"
-"               [ --acpi-forward ]   [ --no-acpi-forward ]\n"
-"               [ --print-listener ] [ --no-print-listener ]\n"
-"               [ --new-X ]          [ --no-new-X ]\n"
+"               [ --auto-attach ]  [ --no-auto-attach ]\n"
+"               [ --kbd-attach ]   [ --no-kbd-attach ]\n"
+"               [ --acpi-forward ] [ --no-acpi-forward ]\n"
+"               [ --new-X ]        [ --no-new-X ]\n"
 "               { DEVPATH | FOLDERSPEC ...}\n"
 "\n"
 "common options: [ -qv ] [ --quiet ] [ --verbose ] [--]\n"
@@ -262,8 +254,6 @@ msgid ""
 "                               to the virtual machine\n"
 "      -f, --no-acpi-forward    don't try to forward ACPI events to the virtual\n"
 "                               machine\n"
-"      -P, --print-listener     run the print listening script\n"
-"      -p, --no-print-listener  do NOT run the print listening script\n"
 "      -X, --new-X              launch a fresh X server\n"
 "      -x, --no-new-X           do NOT launch a fresh X server\n"
 "\n"
@@ -276,15 +266,15 @@ msgid ""
 "\n"
 "Environment variables: several environment variables, with the \\`VBHT_' prefix,\n"
 "  are used to provide defaults: \\`VBHT_AUTO_ATTACH', \\`VBHT_ATTACH_KEYBOARD',\n"
-"  \\`VBHT_ACPI_FORWARD', \\`VBHT_LAUNCH_PRINT_LISTENER', \\`VBHT_USE_NEW_X', can\n"
-"  take either the \\`Y' or \\`N' values and provide defaults for their corresponding\n"
-"  options; the \\`VBHT_VERBOSITY' variable may take any integer number to be taken\n"
-"  as the default verbosity value (note, however, that values below 0 or above 6\n"
-"  will be ignored and truncated to that range).\n"
+"  \\`VBHT_ACPI_FORWARD', \\`VBHT_USE_NEW_X', can take either the \\`Y' or \\`N'\n"
+"  values and provide defaults for their corresponding options; the\n"
+"  \\`VBHT_VERBOSITY' variable may take any integer number to be taken as the\n"
+"  default verbosity value (note, however, that values below 0 or above 6 will be\n"
+"  ignored and truncated to that range).\n"
 "\n"
 "Examples (\\`>' stands for the shell prompt):\n"
 "\n"
-"    > vbht start 'My VM' --no-print-listener --no-auto-attach\n"
+"    > vbht start 'My VM' --no-new-X --no-auto-attach\n"
 "\n"
 "    > vbht start 'My VM' /devices/pci0123:.45/6789:.01:.23.4/usb5/6-7 home@~\n"
 "\n"
@@ -309,7 +299,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:933
+#: vbht:883
 msgid ""
 "Usage: vbht attach [ -f ] [ --force ] { DEVPATH | FOLDERSPEC ...}\n"
 "\n"
@@ -369,7 +359,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1000
+#: vbht:950
 msgid ""
 "Usage: vbht info [ -Mm ] [ --machine-readable ] [ --no-machine-readable ]\n"
 "\n"
@@ -420,7 +410,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1058
+#: vbht:1008
 msgid ""
 "Usage: vbht logs [ -FfEeWwIiDdSs ]\n"
 "               [ --show-fatal ]   [ --no-show-fatal ]\n"
@@ -481,7 +471,7 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1126
+#: vbht:1076
 msgid ""
 "Usage: vbht stop [ -aorsl ] [ -f ] [ --force ]\n"
 "               [ --acpi | --off | --reset | --save | --sleep ]\n"
@@ -553,202 +543,198 @@ msgid ""
 "Report vbht bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: vbht:1231
+#: vbht:1176
 msgid "invalid virtual machine specification! -- \\`:specification'"
 msgstr ""
 
-#: vbht:1238
+#: vbht:1183
 msgid "another process is holding the lock with PID :lockingPID!"
 msgstr ""
 
-#: vbht:1244
+#: vbht:1189
 msgid "setting ignored warnings returned non-zero (:status) status, keyboard attachment disabled!"
 msgstr ""
 
-#: vbht:1266
+#: vbht:1203
 msgid "disabling input devices (:inputDeviceList) failed, keyboards will NOT be attached!"
 msgstr ""
 
-#: vbht:1288
+#: vbht:1225
 msgid "could not wait for virtual machine to start up, keyboard attachment will NOT be available!"
 msgstr ""
 
-#: vbht:1298
+#: vbht:1235
 msgid "keyboard attachment failed for at least one device!"
 msgstr ""
 
-#: vbht:1309
+#: vbht:1246
 msgid "re-enabling input devices failed, trying to re-enable them all!"
 msgstr ""
 
-#: vbht:1310
+#: vbht:1247
 msgid "re-enabling all input devices failed!"
 msgstr ""
 
-#: vbht:1319
+#: vbht:1256
 msgid "restoring ignored warnings returned non-zero (:status) status! -- \\`:warnings'"
 msgstr ""
 
-#: vbht:1345 vbht:1481 vbht:1532
+#: vbht:1278 vbht:1405 vbht:1452
 msgid "no capturing virtual machine running!"
 msgstr ""
 
-#: vbht:1349
+#: vbht:1282
 msgid "the capturing virtual machine is not accepting attachments! -- try forcing"
 msgstr ""
 
-#: vbht:1352 vbht:1535
+#: vbht:1285 vbht:1455
 msgid "you're neither the capturing virtual machine's owner, nor root!"
 msgstr ""
 
-#: vbht:1368
+#: vbht:1301
 msgid "invalid shared folder path! -- \\`:path'"
 msgstr ""
 
-#: vbht:1376
+#: vbht:1309
 msgid "attaching shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1381
+#: vbht:1314
 msgid "attaching read-only shared folder \\`:name' at path \\`:path' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1391
+#: vbht:1324
 msgid "invalid devpath! -- \\`:devpath'"
 msgstr ""
 
-#: vbht:1395
+#: vbht:1328
 msgid "attaching devpath \\`:devpath' at address \\`:address' returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1425
+#: vbht:1354
 msgid "No vbht-managed virtual machine running!"
 msgstr ""
 
-#: vbht:1431
+#: vbht:1360
 msgid "Capturing virtual machine's launcher PID: [:vmPID]"
 msgstr ""
 
-#: vbht:1432
+#: vbht:1361
 msgid "Capturing virtual machine's launcher UID: [:vmUID]"
 msgstr ""
 
-#: vbht:1433
+#: vbht:1362
 msgid "Capturing virtual machine's UUID        : [:vmUUID]"
 msgstr ""
 
-#: vbht:1434
+#: vbht:1363
 msgid "Capturing virtual machine's RUNHASH     : [:runhash]"
 msgstr ""
 
-#: vbht:1436
+#: vbht:1365
 msgid "Auto-attachment    : [:autoAttach]"
 msgstr ""
 
-#: vbht:1437
+#: vbht:1366
 msgid "Keyboard attachment: [:attachKeyboard]"
 msgstr ""
 
-#: vbht:1438
+#: vbht:1367
 msgid "ACPI forwarding    : [:acpiForward]"
 msgstr ""
 
-#: vbht:1439
-msgid "Print-listener     : [:launchPrintListener]"
-msgstr ""
-
-#: vbht:1440
+#: vbht:1368
 msgid "Dedicated X server : [:useNewX]"
 msgstr ""
 
-#: vbht:1491
+#: vbht:1415
 msgid "no log entry for descriptor \\`${address}'!"
 msgstr ""
 
-#: vbht:1528
+#: vbht:1448
 msgid "forcing option will be ignored for stoppage type \\`:stoppageType'"
 msgstr ""
 
-#: vbht:1539
+#: vbht:1459
 msgid "the capturing virtual machine is not being forwarded ACPI events! -- try forcing"
 msgstr ""
 
-#: vbht:1551
+#: vbht:1471
 msgid "invalid stoppage type! -- \\`:stoppage'"
 msgstr ""
 
-#: vbht:1557
+#: vbht:1477
 msgid "stoppage returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1856
+#: vbht:1758
 msgid "VBHT started"
 msgstr ""
 
-#: vbht:1859
+#: vbht:1761
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:1865 vbht:1910 vbht:1968 vbht:2020 vbht:2073 vbht:2136
+#: vbht:1767 vbht:1811 vbht:1868 vbht:1920 vbht:1973 vbht:2036
 msgid "\\`--help' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1873
+#: vbht:1775
 msgid "\\`--version' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1881
+#: vbht:1783
 msgid "\\`--license' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1890 vbht:1954
+#: vbht:1792 vbht:1854
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:1931 vbht:1986 vbht:2035 vbht:2097 vbht:2157
+#: vbht:1831 vbht:1886 vbht:1935 vbht:1997 vbht:2057
 msgid "\\`-h' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1935 vbht:1990 vbht:2039 vbht:2101 vbht:2161
+#: vbht:1835 vbht:1890 vbht:1939 vbht:2001 vbht:2061
 msgid "invalid option at \\`:longOption'! -- \\`:shortOption'"
 msgstr ""
 
-#: vbht:2046 vbht:2168
+#: vbht:1946 vbht:2068
 msgid "invalid option! -- \\`:option'"
 msgstr ""
 
-#: vbht:2176
+#: vbht:2076
 msgid "invalid action! -- \\`:action'"
 msgstr ""
 
-#: vbht:2183
+#: vbht:2083
 msgid "Try \\`:vbhtName start --help' for more information."
 msgstr ""
 
-#: vbht:2184
+#: vbht:2084
 msgid "Try \\`:vbhtName attach --help' for more information."
 msgstr ""
 
-#: vbht:2185
+#: vbht:2085
 msgid "Try \\`:vbhtName info --help' for more information."
 msgstr ""
 
-#: vbht:2186
+#: vbht:2086
 msgid "Try \\`:vbhtName logs --help' for more information."
 msgstr ""
 
-#: vbht:2187
+#: vbht:2087
 msgid "Try \\`:vbhtName stop --help' for more information."
 msgstr ""
 
-#: vbht:2189
+#: vbht:2089
 msgid "Try \\`:vbhtName --help' for more information."
 msgstr ""
 
-#: vbht:2214
+#: vbht:2114
 msgid "something went very wrong! late-unrecognised action: \\`:action'!"
 msgstr ""
 
-#: vbht:2222
+#: vbht:2122
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
