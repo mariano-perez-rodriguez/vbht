@@ -239,7 +239,7 @@ waitRunning() {
     # get virtual machine's state and exit successfully if "running",
     # unsuccessfully if not in "starting"
     case "$(vboxmanage showvminfo "${1}" --machinereadable 2> "${ERRPIPE}" | grep -e '^VMState=' | cut -d"\"" -f2)" in
-      'running') return 0 ;; 'starting') : ;; *) return 1;;
+      'running') return 0 ;; 'starting'|'poweroff'|'paused') : ;; *) return 1;;
     esac
     # wait internal dwell time
     sleep -- "${KBDATTACHINTDWELL}s"
