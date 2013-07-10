@@ -520,7 +520,7 @@ log() {
   else                                     sev_name='O'
   fi
   # build header
-  local -r header="[${RUNHASH}|$(TZ= printf '%(%F@%T)T' -1)|${sev_name}]"
+  local -r header="${RUNHASH}|$(TZ= printf '%(%Y.%m.%d.%H.%M.%S)T' -1)|${sev_name}"
   # build indent
   local indent="${std_log//?/ }"; indent="${indent:1}"; readonly indent
 
@@ -1432,7 +1432,7 @@ doLogs() {
       # if getRUNHASH() failed, yell and be done with it
       if ! [[ "${prevRUNHASH}" ]]; then logError $"no log entry for descriptor \`${address}'!"; errors='X'; else
         # using the severity pattern, show each to the user
-        zgrep -e "'^\[${prevRUNHASH}\|.*\|[${temp}\]'" "${LOGDIR}/*" | while IFS= read -r line; do
+        zgrep -e "'^${prevRUNHASH}\|.*\|[${temp}]'" "${LOGDIR}/*" | while IFS= read -r line; do
           # format and output current line
           #
           #
