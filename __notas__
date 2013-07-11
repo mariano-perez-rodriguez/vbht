@@ -24,3 +24,5 @@ TODO:
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
 - hacer un manejo de opciones menos simplista en openx
+
+- verificar que ocurre con dobles attachments (devpaths o carpetas).
