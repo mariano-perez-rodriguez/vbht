@@ -23,11 +23,4 @@ TODO:
 
 - OPCIONAL: hacer un parser de opciones de linea de comando como la gente
 
-- Problema de audio con X11:
-  Hay que iniciar pulseaudio desde X11 
-  El usuario tiene que ser miembro de los grupos audio, pulse-access (y posiblemente también de 'pulse').
-  Hay que usar 'pulseaudio --check' para determinar si ya hay una sessión corriendo.
-  Si no la hay hay que correr 'pulseaudio --start'.
-  Recién ahora iniciar vboxmanager (verificar que la máquina virtual esté configurada para usar pulseaudio).
-  Esperar a que termine la VM.
-  Si originalmente no había una instancia de pulseaudio corriendo matar la instancia que levantó vbht.
+- hacer un manejo de opciones menos simplista en openx
