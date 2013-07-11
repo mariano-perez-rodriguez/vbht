@@ -2131,11 +2131,11 @@ readonly action verbosity
 
 # dispatch action
 case "${action}" in
-  'S') doStart  ;;
-  'A') doAttach ;;
-  'I') doInfo   ;;
-  'L') doLogs   ;;
-  'X') doStop   ;;
+  'S') doStart  "$@";;
+  'A') doAttach "$@";;
+  'I') doInfo   "$@";;
+  'L') doLogs   "$@";;
+  'X') doStop   "$@";;
   #
   *) logError $"something went very wrong! late-unrecognised action: \`:action'!" "action:${action}"; errors='X' ;;
 esac
