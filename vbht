@@ -532,13 +532,13 @@ log() {
       if (( severity <= verbosity )); then echo "${std_err} ${line}" >&2; fi
       # write to the log file
       echo "${header} ${std_log} ${line}" >> "${LOGFILE}"
+      # reset `first_line' (mask errors, we don't care)
       (( first_line = 0 )) ||:
     else
       # if verbosity mandates, show to stderr
       if (( severity <= verbosity )); then echo "${indent}${term} ${line}" >&2; fi
       # write to the log file
       echo "${header} ${indent}: ${line}" >> "${LOGFILE}"
-      # reset `first_line' (mask errors, we don't care)
     fi
   done <<< "${lines}"
 }
