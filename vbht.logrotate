@@ -2,6 +2,7 @@
 
 # logrotate configuration file for vbht:
 #   - compress rotated logs
+#   - ask logrotate to su to root:vboxusers
 #   - create an empty log after rotation (belonging to root:vboxusers, with them having permission to read and write to it)
 #   - but delay that one rotation cycle (so that we can check the recently rotated logs withoput decompressing them)
 #   - it's OK if the logs are missing
@@ -10,6 +11,7 @@
 #   - rotate weekly
 /var/log/vbht/* {
   compress
+  su root vboxusers
   create 0660 root vboxusers
   delaycompress
   missingok
