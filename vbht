@@ -1254,7 +1254,7 @@ doStart() {
       fi
 
       # if there are ATTACHSPECs to attach, do that now
-      force_attachment='Y' doAttach
+      force_attachment='Y' doAttach "$@"
 
       # if we disabled input devices, re-enable them now
       if [[ "${indevs}" ]]; then
