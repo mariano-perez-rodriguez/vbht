@@ -1406,8 +1406,16 @@ doLogs() {
   # show_stderr : 'Y' / 'N'
   #
 
+  # generic temporary
+  local temp=''
+  # the address of the attached USB device
+  local address=''
+  # the previous RUNHASH
+  local prevRUNHASH=''
+  # variable to hold a log line
+  local line=''
+
   # set up severity pattern values
-  temp=''
   if [[ "${show_fatal}"   == 'Y' ]]; then temp="${temp}F"; fi
   if [[ "${show_error}"   == 'Y' ]]; then temp="${temp}E"; fi
   if [[ "${show_warning}" == 'Y' ]]; then temp="${temp}W"; fi
