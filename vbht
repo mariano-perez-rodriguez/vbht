@@ -1291,12 +1291,31 @@ doAttach() {
   # force_attachment: 'Y' / 'N'
   #
 
+  # the UID of the capturing VM
+  local -i vmUID=0
+  # the UUID of the capturing VM
+  local -l vmUUID=''
+  # the previous RUNHASH
+  local prevRUNHASH=''
+  # auto attachment status
+  local -u auto_attaching=''
+  # used to construct evaluatable line
+  local line=''
+  # the name to be assigned to the created shared folder
+  local nameSF=''
+  # the path to be assigned to the created shared folder
+  local pathSF=''
+  # generic temporary
+  local temp=''
+  # the address of the USB device to be attached
+  local address=''
+
   # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH auto_attach _ _ _ _; then
+  if ! readLock _ vmUID vmUUID prevRUNHASH auto_attaching _ _ _ _; then
     logError $"no capturing virtual machine running!"; errors='X'
   else
     # check auto-attachment and forcing
-    if [[ "${auto_attach}" == 'N' && "${force_attachment}" == 'N' ]]; then
+    if [[ "${auto_attaching}" == 'N' && "${force_attachment}" == 'N' ]]; then
       logError $"the capturing virtual machine is not accepting attachments! -- try forcing"; errors='X'
     else
       # check if the user may attach to the capturing virtual machine
