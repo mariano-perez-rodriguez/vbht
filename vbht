@@ -1185,8 +1185,25 @@ doStart() {
   # use_new_X      : 'Y' / 'N'
   #
 
-  # set common variables
-  vmUID="${UID}"
+  # the UID of the capturing VM
+  local -i vmUID="${UID}"
+  # generic temporary
+  local temp=''
+  # generic temporary
+  local vmNAME=''
+  # the PID of the process holding the lock
+  local -i lockingPID=0
+  # previous VirtualBox(R) warnings
+  local warns=''
+  # used to hold return values in general
+  local -i ret=0
+  # disabled input devices list
+  local indevs=''
+  # used to construct evaluatable line
+  local line=''
+  # current VirtualBox(R)'s PID
+  local -i vbPID=0
+
   # verify that vmUUID refers to an actual virtual machine (mask errors,
   # we're going to check for emptiness of "vmUUID")
   temp="${vmUUID}"; vmUUID=$(getUUID ${vmUUID}) ||:
