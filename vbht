@@ -1367,12 +1367,29 @@ doInfo() {
   # info_machine_readable: 'Y' / 'N'
   #
 
+  # the PID of the capturing VM
+  local -i vmPID=0
+  # the UID of the capturing VM
+  local -i vmUID=0
+  # the UUID of the capturing VM
+  local -l vmUUID=''
+  # the previous RUNHASH
+  local prevRUNHASH=''
+  # auto attachment status
+  local -u auto_attaching=''
+  # keyboard attachment status
+  local -u attaching_keyboard=''
+  # ACPI forwarding status
+  local -u acpi_forwarding=''
+  # new X server instance creation status
+  local -u using_new_X=''
+
   # try to read the lock file's line
-  if ! readLock vmPID vmUID vmUUID prevRUNHASH auto_attach attach_keyboard acpi_forward use_new_X; then
+  if ! readLock vmPID vmUID vmUUID prevRUNHASH auto_attaching attaching_keyboard acpi_forwarding using_new_X; then
     if [[ "${info_machine_readable}" == 'Y' ]]; then echo ''; else echo $"No vbht-managed virtual machine running!"; fi
   else
     if [[ "${info_machine_readable}" == 'Y' ]]; then
-      echo "${vmPID}:${vmUID}:${vmUUID}:${prevRUNHASH}:${auto_attach}:${attach_keyboard}:${acpi_forward}:${use_new_X}"
+      echo "${vmPID}:${vmUID}:${vmUUID}:${prevRUNHASH}:${auto_attaching}:${attaching_keyboard}:${acpi_forwarding}:${using_new_X}"
     else
       # write formatted output to stdout
       println $"Capturing virtual machine's launcher PID: [:vmPID]"   "vmPID:${vmPID}"
@@ -1380,10 +1397,10 @@ doInfo() {
       println $"Capturing virtual machine's UUID        : [:vmUUID]"  "vmUUID:${vmUUID}"
       println $"Capturing virtual machine's RUNHASH     : [:runhash]" "runhash:${prevRUNHASH}"
       echo
-      println $"Auto-attachment    : [:autoAttach]"     "autoAttach:${auto_attach}"
-      println $"Keyboard attachment: [:attachKeyboard]" "attachKeyboard:${attach_keyboard}"
-      println $"ACPI forwarding    : [:acpiForward]"    "acpiForward:${acpi_forward}"
-      println $"Dedicated X server : [:useNewX]"        "useNewX:${use_new_X}"
+      println $"Auto-attachment    : [:autoAttach]"     "autoAttach:${auto_attaching}"
+      println $"Keyboard attachment: [:attachKeyboard]" "attachKeyboard:${attaching_keyboard}"
+      println $"ACPI forwarding    : [:acpiForward]"    "acpiForward:${acpi_forwarding}"
+      println $"Dedicated X server : [:useNewX]"        "useNewX:${using_new_X}"
     fi
   fi
 }
