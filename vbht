@@ -1461,19 +1461,30 @@ doStop() {
   # force_stop: 'Y' / 'N'
   #
 
+  # the UID of the capturing VM
+  local -i vmUID=0
+  # the UUID of the capturing VM
+  local -l vmUUID=''
+  # the previous RUNHASH
+  local prevRUNHASH=''
+  # ACPI forwarding status
+  local -u acpi_forwarding=''
+  # used to construct evaluatable line
+  local line=''
+
   # be obnoxious about `--force' being ignored
   if [[ "${force_stop}" == 'Y' && ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) ]]; then
     logWarning $"forcing option will be ignored for stoppage type \`:stoppageType'" "stoppageType:${stop_method}"
   fi
 
   # try to read the lock file's line
-  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forward _ _; then logError $"no capturing virtual machine running!"; errors='X'
+  if ! readLock _ vmUID vmUUID prevRUNHASH _ _ acpi_forwarding _ _; then logError $"no capturing virtual machine running!"; errors='X'
   else
     # check if the user may stop the capturing virtual machine
     if (( ( UID != vmUID ) && UID )); then logError $"you're neither the capturing virtual machine's owner, nor root!"; errors='X'
     else
       # check ACPI forwarding and forcing
-      if [[ ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) && "${acpi_forward}" == 'N' && "${force_stop}" == 'N' ]]; then
+      if [[ ( "${stop_method}" != 'A' || "${stop_method}" != 'L' ) && "${acpi_forwarding}" == 'N' && "${force_stop}" == 'N' ]]; then
         logError $"the capturing virtual machine is not being forwarded ACPI events! -- try forcing"; errors='X'
       else
         # start building "stop" line
