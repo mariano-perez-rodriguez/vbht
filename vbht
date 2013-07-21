@@ -173,7 +173,7 @@ getUUID() {
   local -r IFS=$'\n'
   # get the list of registered virtual machines, keep only matching names and/or
   # UUIDs, extract the UUIDs and eliminate duplicates
-  local -a temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' | LC_ALL=C sort -u))
+  local -ar temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '\{[[:xdigit:]]\{8\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{4\}-[[:xdigit:]]\{12\}\}$' | LC_ALL=C sort -u))
   # if the denomination is ambiguous or empty, return failure
   if ! (( ${#temp[@]} == 1 )); then return 1; fi
   # remove redundant "{" and "}", echo it and return success
@@ -192,7 +192,7 @@ getNAME() {
   local -r IFS=$'\n'
   # get the list of registered virtual machines, keep only matching names and/or
   # UUIDs, extract the NAMEs and eliminate duplicates
-  local -a temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '^".*"' | LC_ALL=C sort -u))
+  local -ar temp=($(vboxmanage list vms | grep -e "^\"${1}\"" -e "\{${1}\}\$" | grep -oe '^".*"' | LC_ALL=C sort -u))
   # if the denomination is ambiguous or empty, return failure
   if ! (( ${#temp[@]} == 1 )); then return 1; fi
   # remove redundant '"'s, echo it and return success
@@ -273,7 +273,7 @@ attachKbds() {
     # if we got a valid address
     if [[ "${temp}" ]]; then
       # try to attach it (ignore errors, we'll return accordingly)
-      vboxmanage controlvm "${1}" usbattach "${temp}" &> "${ERRPIPE}" || (( ret++ )) ||:
+      vboxmanage controlvm "${1}" usbattach "${temp}" &> "${ERRPIPE}" || (( ret = 1 )) ||:
     fi
   done
   # if there were errors, return accordingly
@@ -1682,6 +1682,9 @@ declare -u errors=''
 #  'X'  stop
 declare -u action=''
 
+# the UUID of the (to be) capturing VM
+declare -l vmUUID=''
+
 # type of stoppage
 #  'A'  ACPI off
 #  'O'  power off  (default)
@@ -1772,42 +1775,9 @@ declare -i parameter_seen; (( parameter_seen = 0 )) ||:
 
 
 # ==============================================================================
-# == General variables =========================================================
+# == Generic variables =========================================================
 # ==============================================================================
 
-# the UID of the (to be) capturing VM
-declare -i vmUID=0
-# the UUID of the (to be) capturing VM
-declare -l vmUUID=''
-# the NAME of the (to be) capturing VM
-declare vmNAME=''
-
-# the PID of the process holding the lock
-declare -i lockingPID=0
-# current VirtualBox(R)'s PID
-declare -i vbPID=0
-# the PID of the (to be) capturing VM
-declare -i vmPID=0
-
-# the address of the (to be) attached USB device and, eventually, temps
-declare address=''
-# the name to be assigned to the (to be) created shared folder
-declare nameSF=''
-# the path to be assigned to the (to be) created shared folder
-declare pathSF=''
-
-# previous VirtualBox(R) warnings
-declare warns=''
-# disabled input devices list
-declare indevs=''
-
-# used to construct evaluatable lines and, eventually, temps
-declare line=''
-# used to hold return values in general
-declare -i ret=0
-
-# generic temporary
-declare temp=''
 # generic iterator
 declare -i i=0
 
