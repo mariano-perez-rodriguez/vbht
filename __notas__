@@ -40,6 +40,13 @@ TODO:
 
 - hacer un manejo de opciones menos simplista en openx
 
-- verificar que ocurre con dobles attachments (devpaths o carpetas).
+- verificar que ocurre con dobles attachments (devpaths o carpetas)
+  - que por defecto no se permita attachear dos veces lo mismo, pero que si se le pasa
+    un --force entonces si.
 
-- remover variables globales de mas (las necesitabamos antes porque todo el codigo estaba escrito de un tiro, ahora que tenemos las funciones do*() muchas de las variables globales no hacen mas falta)
+- para "encolar" traps:
+
+  
+  a=$(trap -p SIGUSR1 | head -n 1 | cut -d' ' -f3-); a=${a% *}; a=${a:1:-1}; echo ">>>$a<<<"; trap "$a" SIGUSR2
+
+
