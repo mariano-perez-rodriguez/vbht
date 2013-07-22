@@ -579,9 +579,9 @@ getRUNHASH() {
   local -r IFS=$'\n'
   # zgrep all of the logs looking for the IDENT pattern, keep only matching lines,
   # extract the RUNHASHes and eliminate duplicates
-  local temp="$(zgrep -e "'^\[[^]]\+\\\|O\] IDENT ${1}:[[:alnum:]]*:.*$'" \
-                      -e "'^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:${1}:.*$'" \
-                      -e "'^\[[^]]\+\\\|O\] IDENT [[:alnum:]]*:[[:alnum:]]*:${1}$'" "${LOGDIR}/*" | cut -d'|' -f2- | LC_ALL=C sort -u | cut -d' ' -f4 | cut -d':' -f1 | tr '\n' ',')"
+  local temp="$(zgrep -e "'^[^ ]\+|O IDENT ${1}:[[:alnum:]]*:.*$'" \
+                      -e "'^[^ ]\+|O IDENT [[:alnum:]]*:${1}:.*$'" \
+                      -e "'^[^ ]\+|O IDENT [[:alnum:]]*:[[:alnum:]]*:${1}$'" ${LOGDIR}/* | cut -d'|' -f2- | LC_ALL=C sort -u | cut -d' ' -f4 | cut -d':' -f1 | tr '\n' ',')"
   # if the denomination is empty, return failure
   if ! [[ "${temp}" ]]; then return 1; fi
   # remove final comma, echo it and return success
@@ -1465,6 +1465,8 @@ doLogs() {
   local address=''
   # the previous RUNHASH
   local prevRUNHASH=''
+  # variable to hold a log header
+  local header=''
   # variable to hold a log line
   local line=''
 
@@ -1488,17 +1490,26 @@ doLogs() {
     fi
     # if we actually have an address to look up
     if [[ "${address}" ]]; then
-      # ask getRUNHAS() to look for an entry (mask errors, we'll check for empty)
+      # ask getRUNHASH() to look for an entry (mask errors, we'll check for empty)
       prevRUNHASH="$(getRUNHASH "${address}")" ||:
       # if getRUNHASH() failed, yell and be done with it
       if ! [[ "${prevRUNHASH}" ]]; then logError $"no log entry for descriptor \`${address}'!"; errors='X'; else
         # using the severity pattern, show each to the user
-        zgrep -e "'^${prevRUNHASH}\|.*\|[${temp}]'" "${LOGDIR}/*" | while IFS= read -r line; do
+        zgrep -e "'^${prevRUNHASH}|.*|[${temp}]'" "${LOGDIR}/*" | cut -d'|' -f2- | while IFS=' ' read -r header line; do
           # format and output current line
           #
           #
           #
-          : #@TODO: write formatting
+          # format severity
+          case "${header:(-1)}" in
+            'F') echo "${header::(-2)} ${START_FATAL}${line%%:*}:${STOP_FATAL}${line#*:}" ;;
+            'E') echo "${header::(-2)} ${START_ERROR}${line%%:*}:${STOP_ERROR}${line#*:}" ;;
+            'W') echo "${header::(-2)} ${START_WARNING}${line%%:*}:${STOP_WARNING}${line#*:}" ;;
+            'I') echo "${header::(-2)} ${START_INFO}${line%%:*}:${STOP_INFO}${line#*:}" ;;
+            'D') echo "${header::(-2)} ${START_DEBUG}${line%%:*}:${STOP_DEBUG}${line#*:}" ;;
+            'S') echo "${header::(-2)} ${START_STDERR}${line%%:*}:${STOP_STDERR}${line#*:}" ;;
+              *) echo "${header::(-2)} ${line}" ;;
+          esac
           #
           #
           #
