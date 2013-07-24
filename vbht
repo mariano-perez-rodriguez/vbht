@@ -177,7 +177,7 @@ getUUID() {
   # if the denomination is ambiguous or empty, return failure
   if ! (( ${#temp[@]} == 1 )); then return 1; fi
   # remove redundant "{" and "}", echo it and return success
-  local -r ret="${temp[0]%\}}"; echo "${ret#\{}"
+  local -rl ret="${temp[0]%\}}"; echo "${ret#\{}"
 }
 
 # Get the NAME corresponding to either a name or an UUID
@@ -1311,7 +1311,7 @@ doAttach() {
   # the UID of the capturing VM
   local -i vmUID=0
   # the UUID of the capturing VM
-  local -l vmUUID=''
+  local vmUUID=''
   # the previous RUNHASH
   local prevRUNHASH=''
   # auto attachment status
