@@ -1311,7 +1311,7 @@ doAttach() {
   # the UID of the capturing VM
   local -i vmUID=0
   # the UUID of the capturing VM
-  local vmUUID=''
+  local -l vmUUID=''
   # the previous RUNHASH
   local prevRUNHASH=''
   # auto attachment status
@@ -1694,7 +1694,7 @@ declare -u errors=''
 declare -u action=''
 
 # the UUID of the (to be) capturing VM
-declare -l vmUUID=''
+declare vmUUID=''
 
 # type of stoppage
 #  'A'  ACPI off
