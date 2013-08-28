@@ -151,8 +151,10 @@ if [[ "$checksum" != '___COMPRESSED_DATA_SHA512_CHECKSUM_GOES_HERE___' ]]; then 
 # == User confirmation =========================================================
 # ==============================================================================
 
-# show message telling the user what we're going to do and asking for confirmation
-cat <<'EOM'
+# only ask for confirmation if unattended switch (-y) was NOT issued
+if [[ "$1" != '-y' ]]; then
+  # show message telling the user what we're going to do and asking for confirmation
+  cat <<'EOM'
 This will install the VirtualBox(R) Host Tools on your system.
 
 The actions to be performed are the following:
@@ -175,15 +177,17 @@ The actions to be performed are the following:
      changing ownership and permissions as well.
   5. Create the log directory `/var/log/vbht'.
 
+If you would like to install unattendedly, pass `-y' to the installer.
 EOM
-read -rsN1 -p $'Enter `Y\' to continue, anything else to exit...'
-echo
-
-# if anything other that "Y" was entered, exit
-if [[ "$REPLY" != 'Y' ]]; then
+  read -rsN1 -p $'Enter `Y\' to continue, anything else to exit...'
   echo
-  echo 'Aborted by user!'
-  exit
+
+  # if anything other that "Y" was entered, exit
+  if [[ "$REPLY" != 'Y' ]]; then
+    echo
+    echo 'Aborted by user!'
+    exit
+  fi
 fi
 
 
