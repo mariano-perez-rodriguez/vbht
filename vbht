@@ -1246,7 +1246,7 @@ doStart() {
       line="VirtualBox --startvm '${vmUUID}'"
       # prepend it with the "openx" wrapper if a new instance of the X server is
       # to be run, additionally, add a "--fullscreen" modifier
-      if [[ "${use_new_X}" == 'Y' ]]; then line="sudo -Hn -- /opt/vbht/openx -n ${line} --fullscreen"; fi
+      if [[ "${use_new_X}" == 'Y' ]]; then line="sudo -Hn -- /opt/vbht/openx ${line} --fullscreen"; fi
       # finish building launch line
       line="${line} --no-debug --no-startvm-errormsgbox --start-running 2> ${ERRPIPE}"
       # evaluate launch line (no point in checking exit code, as the line is run
