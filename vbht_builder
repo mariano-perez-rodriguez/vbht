@@ -176,7 +176,8 @@ The actions to be performed are the following:
        - `vbht', and
        - `vbht_uninstaller',
      changing ownership and permissions as well.
-  5. Create the log directory `/var/log/vbht'.
+  5. Create the log directory `/var/log/vbht', and empty
+       logfile `/var/log/vbht/vbht'
 
 If you would like to install unattendedly, pass `-y' to the installer.
 EOM
@@ -240,6 +241,9 @@ chown -f root:root '/opt/vbht/vbht_uninstaller' 2> /dev/null; chmod -f ug=rx,o= 
 
 # create log directory and change its owner and permission
 mkdir -p '/var/log/vbht'; chown -f root:vboxusers '/var/log/vbht'; chmod -f ug=srwx,o= '/var/log/vbht'
+# create log file and change its owner and permission
+touch '/var/log/vbht/vbht'; chown -f root:vboxusers '/var/log/vbht/vbht'; chmod -f ug=rw,o= '/var/log/vbht/vbht'
+
 
 # remove temporary file and dir
 rm  -f -- "$tempfile"
