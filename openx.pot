@@ -1,28 +1,28 @@
-#: openx:100
-msgid "At least bash version 4.2 is needed in order to run this script -- the detected version is \\`:major.:minor'"
-msgstr ""
-
-#: openx:101 openx:142
-msgid "Aborting!"
-msgstr ""
-
-#: openx:131
+#: openx:113
 msgid "Command not found in path: \\`:missingCommand'"
 msgstr ""
 
-#: openx:138
+#: openx:120
 msgid "At least one essential command was not found in path!"
 msgstr ""
 
-#: openx:140
+#: openx:122
 msgid "At least :missingAmmount essential commands were not found in path!"
 msgstr ""
 
-#: openx:221
+#: openx:124 openx:146
+msgid "Aborting!"
+msgstr ""
+
+#: openx:145
+msgid "At least bash version 4.2 is needed in order to run this script -- the detected version is \\`:major.:minor'"
+msgstr ""
+
+#: openx:222
 msgid "Error: no arguments provided!"
 msgstr ""
 
-#: openx:225
+#: openx:226
 msgid ""
 "Usage: sudo openx [-d | --dump | -s | --sim ] [ -n | --noptr ]\n"
 "           COMMAND [ARGUMENT...]\n"
@@ -45,7 +45,7 @@ msgid ""
 "Examples (\\`>' stands for the shell prompt, \\`1000' for the current UID):\n"
 "\n"
 "    > sudo openx -s xclock -digital -utime\n"
-"    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\\\ \n"
+"    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\\\\n"
 "      -- :.1234567890\n"
 "\n"
 "    > sudo openx -d xclock -digital -utime\n"
@@ -67,7 +67,7 @@ msgid ""
 "     something other than a space-class character (the chaps at X can\n"
 "     get REALLY confused otherwise).\n"
 "\n"
-"openx can't hear your cries, don't fight it: these meassures were set\n"
+"openx can't hear your cries, don't fight it:. these measures were set\n"
 "in place in order to keep you from shooting yourself on the foot.\n"
 "\n"
 "\n"
@@ -75,11 +75,11 @@ msgid ""
 "Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: openx:277
-msgid "Warning: \\`--help' is supposed to be the ONLY argument given!"
+#: openx:278 openx:295 openx:303
+msgid "Warning: \\`:command' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: openx:283
+#: openx:284
 msgid ""
 "openx 0.4\n"
 "Copyright (C) 2012 Mariano Perez Rodriguez\n"
@@ -91,46 +91,38 @@ msgid ""
 "Report openx bugs to: <mariano.perez.rodriguez@gmail.com>\n"
 msgstr ""
 
-#: openx:294
-msgid "Warning: \\`--version' is supposed to be the ONLY argument given!"
-msgstr ""
-
-#: openx:302
-msgid "Warning: \\`--license' is supposed to be the ONLY argument given!"
-msgstr ""
-
-#: openx:324
+#: openx:325
 msgid "Error: the argument \\`:argument' does not denote a known command!"
 msgstr ""
 
-#: openx:332
+#: openx:333
 msgid "Error: no lone \\`--' tokens allowed!"
 msgstr ""
 
-#: openx:336 openx:393
+#: openx:337 openx:394
 msgid "Try \\`:openxName --help' for more information."
 msgstr ""
 
-#: openx:373
+#: openx:374
 msgid "Error: cannot determine the current user's id!"
 msgstr ""
 
-#: openx:374
+#: openx:375
 msgid "Error: cannot determine the previous user's id!"
 msgstr ""
 
-#: openx:385
+#: openx:386
 msgid "Error: chaining is not allowed!"
 msgstr ""
 
-#: openx:386
+#: openx:387
 msgid "Error: root can't do this!"
 msgstr ""
 
-#: openx:388
+#: openx:389
 msgid "Error: you are not root!"
 msgstr ""
 
-#: openx:440
+#: openx:441
 msgid "Warning: openvt returned non-zero (:status) status!"
 msgstr ""
