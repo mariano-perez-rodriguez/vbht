@@ -64,9 +64,9 @@ print() {
     # keep everything up to the first `:'
     key=${1%%:*}
     # verify the key conforms to the regex
-    if [[ "${key}" =~ $re ]]; then
+    if [[ "${key}" =~ ${re} ]]; then
       # take everything from the first `:' on, and replace in it every
-      # `:' by `:.'m thus quoting it.
+      # `:' by `:.', thus quoting it.
       reps[${key}]=${1#*:}
       reps[${key}]=${reps[${key}]//:/:.}
     fi
@@ -109,7 +109,7 @@ verifyNeededCommands() {
   # loop through each command
   for comm in "${NEEDEDCOMMANDS[@]}"; do
     # try to hash it (throw away output and errors)
-    if ! hash "$comm" &> /dev/null; then
+    if ! hash "${comm}" &> /dev/null; then
       println $"Command not found in path: \`:missingCommand'" "missingCommand:${comm}"
       (( missing++ )) ||:
     fi
@@ -245,7 +245,7 @@ it and switching back when done; optionally, pass ARGUMENT(s) to COMMAND.
 Examples (\`>' stands for the shell prompt, \`1000' for the current UID):
 
     > sudo openx -s xclock -digital -utime
-    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\ 
+    openvt -d -- sudo -Hnu '#1000' -- xinit /usr/bin/xclock -digital -utime \\
       -- :.1234567890
 
     > sudo openx -d xclock -digital -utime
@@ -267,7 +267,7 @@ NOTE: this script has a will of its own, bear in mind that
      something other than a space-class character (the chaps at X can
      get REALLY confused otherwise).
 
-openx can't hear your cries, don't fight it: these meassures were set
+openx can't hear your cries, don't fight it:. these measures were set
 in place in order to keep you from shooting yourself on the foot.
 
 
@@ -275,7 +275,7 @@ Written by Mariano Perez Rodriguez.
 Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 "
     # just be obnoxious about `--help' not being the only argument given :P
-     if (( $# != 1 )); then echo $"Warning: \`--help' is supposed to be the ONLY argument given!" >&2; fi
+     if (( $# != 1 )); then println $"Warning: \`:command' is supposed to be the ONLY argument given!" "command:${1}" >&2; fi
     exit 0
   fi
 
@@ -292,7 +292,7 @@ Written by Mariano Perez Rodriguez.
 Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
 "
     # just be obnoxious about `--version' not being the only argument given :P
-    if (( $# != 1 )); then echo $"Warning: \`--version' is supposed to be the ONLY argument given!" >&2; fi
+    if (( $# != 1 )); then println $"Warning: \`:command' is supposed to be the ONLY argument given!" "command:${1}" >&2; fi
     exit 0
   fi
 
@@ -300,7 +300,7 @@ Report openx bugs to: <mariano.perez.rodriguez@gmail.com>
   if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
     /usr/bin/env pager /opt/vbht/agplv3
     # just be obnoxious about `--license' not being the only argument given :P
-    if (( $# != 1 )); then echo $"Warning: \`--license' is supposed to be the ONLY argument given!" >&2; fi
+    if (( $# != 1 )); then println $"Warning: \`:command' is supposed to be the ONLY argument given!" "command:${1}" >&2; fi
     exit 0
   fi
 
