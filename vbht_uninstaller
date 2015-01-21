@@ -27,7 +27,7 @@ set -o errexit  # exit on ANY error
 # ==============================================================================
 
 # fail if the user is not running the script as root
-if (( $UID )); then echo 'Error: this script MUST be run as root!' >&2; exit 1; fi
+if (( UID )); then echo 'Error: this script MUST be run as root!' >&2; exit 1; fi
 
 # restore backups
 if [[ -f '/etc/acpi/pre-vbht-powerbtn.sh' ]]; then mv -fT -- '/etc/acpi/pre-vbht-powerbtn.sh' '/etc/acpi/powerbtn.sh' 2> /dev/null; else rm -f '/etc/acpi/powerbtn.sh' 2> /dev/null; fi
@@ -44,4 +44,3 @@ rm -rf -- '/opt/vbht' 2> /dev/null
 
 # aaand we're done!
 exit 0
-
