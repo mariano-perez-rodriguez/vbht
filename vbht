@@ -66,9 +66,9 @@ print() {
     # keep everything up to the first `:'
     key=${1%%:*}
     # verify the key conforms to the regex
-    if [[ "${key}" =~ $re ]]; then
+    if [[ "${key}" =~ ${re} ]]; then
       # take everything from the first `:' on, and replace in it every
-      # `:' by `:.'m thus quoting it.
+      # `:' by `:.', thus quoting it.
       reps[${key}]=${1#*:}
       reps[${key}]=${reps[${key}]//:/:.}
     fi
@@ -111,7 +111,7 @@ verifyNeededCommands() {
   # loop through each command
   for comm in "${NEEDEDCOMMANDS[@]}"; do
     # try to hash it (throw away output and errors)
-    if ! hash "$comm" &> /dev/null; then
+    if ! hash "${comm}" &> /dev/null; then
       println $"Command not found in path: \`:missingCommand'" "missingCommand:${comm}"
       (( missing++ )) ||:
     fi
@@ -310,7 +310,7 @@ getWarns() {
 setWarns() {
   # turn the comma-separated list into a newline-separated list, remove empty
   # lines, sort it, and turn it back into a comma-separated list
-    local -r temp="$(tr ',[:space:]' '\n' <<< "${*}" | grep . | LC_ALL=C sort -u | tr '\n' ',')"
+  local -r temp="$(tr ',[:space:]' '\n' <<< "${*}" | grep . | LC_ALL=C sort -u | tr '\n' ',')"
   # set them
   vboxmanage setextradata global 'GUI/SuppressMessages' "${temp%,}" 2> "${ERRPIPE}"
 }
@@ -698,7 +698,7 @@ printing, keyboard jailing, and USB auto-attachment.
                    force the ACPI event to be sent, even if the machine is not
                    being forwarded ACPI events, ignored if stoppage type is
                    not one of \`acpi' or \`sleep'
-                   
+
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
@@ -915,7 +915,7 @@ corresponding shared folder.
 
       -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if
                    the machine is not accepting auto attachments
-                   
+
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
@@ -981,7 +981,7 @@ in capturing mode (if there's one such machine).
 
       -M, --machine-readable     generate output in machine readable format
       -m, --no-machine-readable  generate output in human readable format
-                   
+
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
@@ -1117,7 +1117,7 @@ Action \`stop' stops the virtual machine currently running in capturing mode.
                    force the ACPI event to be sent, even if the machine is not
                    being forwarded ACPI events, ignored if stoppage type is
                    not one of \`acpi' or \`sleep'
-                   
+
       -q, --quiet    decrease by 1 the verbosity level
       -v, --verbose  increase by 1 the verbosity level
 
@@ -1670,7 +1670,7 @@ declare -ri KBDATTACHINIDWELL=5 KBDATTACHMAXTRIES=20 KBDATTACHINTDWELL=2
 # ------------------------------------------------------------------------------
 
 # the actual home directory (valid for root under udev too)
-declare -r HOME=${HOME:-/root}
+declare -r HOME="${HOME:-/root}"
 
 # ignored VirtualBox(R) warnings
 declare -r IGNOREWARNINGS='confirmGoingFullscreen,confirmGoingSeamless,confirmInputCapture,confirmVMReset,remindAboutAutoCapture,remindAboutGoingFullscreen,remindAboutGoingSeamless,remindAboutInputCapture,remindAboutMouseIntegrationOff,remindAboutMouseIntegrationOn,remindAboutPausedVMInput,remindAboutWrongColorDepth,showRuntimeError.warning.HostAudioNotResponding'
@@ -1835,7 +1835,7 @@ else
   if [[ "${1}" == '-h' || "${1}" == '--help' ]]; then
     showHelp
     # just be obnoxious about `--help' not being the only argument given :P
-    if (( $# != 1 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
     exit 0
   fi
 
@@ -1843,7 +1843,7 @@ else
   if [[ "${1}" == '-V' || "${1}" == '--version' ]]; then
     showVersion
     # just be obnoxious about `--version' not being the only argument given :P
-    if (( $# != 1 )); then logWarning $"\`--version' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
     exit 0
   fi
 
@@ -1851,7 +1851,7 @@ else
   if [[ "${1}" == '-L' || "${1}" == '--license' ]]; then
     /usr/bin/env pager /opt/vbht/agplv3
     # just be obnoxious about `--license' not being the only argument given :P
-    if (( $# != 1 )); then logWarning $"\`--license' is supposed to be the ONLY argument given!"; fi
+    if (( $# != 1 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
     exit 0
   fi
 
@@ -1868,7 +1868,7 @@ else
         if [[ "${2}" == '--help' ]]; then
           showStartHelp
           # just be obnoxious about `--help' not being the only argument given :P
-          if (( $# != 2 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+          if (( $# != 2 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${2}"; fi
           exit 0
         fi
         # get optional arguments
@@ -1887,7 +1887,7 @@ else
               showStartHelp
               # just be obnoxious about `--help' not being the only argument given :P
               # (NB: if we got this far, we have seen a VM name or UUID, so this message should always appear)
-              logWarning $"\`--help' is supposed to be the ONLY argument given!"
+              logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"
               exit 0
             ;;
             # check for end-of-options
@@ -1907,7 +1907,7 @@ else
                   'h')
                     showStartHelp
                     # just be obnoxious about `h' not being the only argument given :P
-                    if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                    if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1:$i:1}"; fi
                     exit 0
                   ;;
                   # invalid option
@@ -1944,7 +1944,7 @@ else
             '--help')
               showAttachHelp
               # just be obnoxious about `--help' not being the only argument given :P
-              if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+              if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
               exit 0
             ;;
             # check for end-of-options
@@ -1962,7 +1962,7 @@ else
                   'h')
                     showAttachHelp
                     # just be obnoxious about `h' not being the only argument given :P
-                    if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                    if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1:$i:1}"; fi
                     exit 0
                   ;;
                   # invalid option
@@ -1996,7 +1996,7 @@ else
           '--help')
             showInfoHelp
             # just be obnoxious about `--help' not being the only argument given :P
-            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
             exit 0
           ;;
           # check for short options
@@ -2011,7 +2011,7 @@ else
                 'h')
                   showInfoHelp
                   # just be obnoxious about `h' not being the only argument given :P
-                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1:$i:1}"; fi
                   exit 0
                 ;;
                 # invalid option
@@ -2049,7 +2049,7 @@ else
           '--help')
             showLogsHelp
             # just be obnoxious about `--help' not being the only argument given :P
-            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
             exit 0
           ;;
           # check for end-of-options
@@ -2073,7 +2073,7 @@ else
                 'h')
                   showLogsHelp
                   # just be obnoxious about `h' not being the only argument given :P
-                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1:$i:1}"; fi
                   exit 0
                 ;;
                 # invalid option
@@ -2112,7 +2112,7 @@ else
           '--help')
             showStopHelp
             # just be obnoxious about `--help' not being the only argument given :P
-            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`--help' is supposed to be the ONLY argument given!"; fi
+            if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1}"; fi
             exit 0
           ;;
           # check for short options
@@ -2133,7 +2133,7 @@ else
                 'h')
                   showStopHelp
                   # just be obnoxious about `h' not being the only argument given :P
-                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`-h' is supposed to be the ONLY argument given!"; fi
+                  if (( $# != 1 || parameter_seen != 0 )); then logWarning $"\`:command' is supposed to be the ONLY argument given!" "command:${1:$i:1}"; fi
                   exit 0
                 ;;
                 # invalid option
@@ -2171,8 +2171,8 @@ if [[ "${errors}" ]]; then
 fi
 
 # fix up verbosity
-if (( verbosity > MAX_VERB )); then (( verbosity = ${MAX_VERB} )); fi
-if (( verbosity < 0        )); then (( verbosity = 0           )); fi
+if (( verbosity > MAX_VERB )); then (( verbosity = MAX_VERB )); fi
+if (( verbosity < 0        )); then (( verbosity = 0        )); fi
 
 # prevent accidental modification
 readonly action verbosity

@@ -121,7 +121,7 @@ msgid ""
 "                   force the ACPI event to be sent, even if the machine is not\n"
 "                   being forwarded ACPI events, ignored if stoppage type is\n"
 "                   not one of \\`acpi' or \\`sleep'\n"
-"                   \n"
+"\n"
 "      -q, --quiet    decrease by 1 the verbosity level\n"
 "      -v, --verbose  increase by 1 the verbosity level\n"
 "\n"
@@ -317,7 +317,7 @@ msgid ""
 "\n"
 "      -f, --force  forcibly attach the given DEVPATH or FOLDERSPEC, even if\n"
 "                   the machine is not accepting auto attachments\n"
-"                   \n"
+"\n"
 "      -q, --quiet    decrease by 1 the verbosity level\n"
 "      -v, --verbose  increase by 1 the verbosity level\n"
 "\n"
@@ -376,7 +376,7 @@ msgid ""
 "\n"
 "      -M, --machine-readable     generate output in machine readable format\n"
 "      -m, --no-machine-readable  generate output in human readable format\n"
-"                   \n"
+"\n"
 "      -q, --quiet    decrease by 1 the verbosity level\n"
 "      -v, --verbose  increase by 1 the verbosity level\n"
 "\n"
@@ -498,7 +498,7 @@ msgid ""
 "                   force the ACPI event to be sent, even if the machine is not\n"
 "                   being forwarded ACPI events, ignored if stoppage type is\n"
 "                   not one of \\`acpi' or \\`sleep'\n"
-"                   \n"
+"\n"
 "      -q, --quiet    decrease by 1 the verbosity level\n"
 "      -v, --verbose  increase by 1 the verbosity level\n"
 "\n"
@@ -579,7 +579,7 @@ msgstr ""
 msgid "restoring ignored warnings returned non-zero (:status) status! -- \\`:warnings'"
 msgstr ""
 
-#: vbht:1332 vbht:1484 vbht:1542
+#: vbht:1332 vbht:1486 vbht:1553
 msgid "no capturing virtual machine running!"
 msgstr ""
 
@@ -587,7 +587,7 @@ msgstr ""
 msgid "the capturing virtual machine is not accepting attachments! -- try forcing"
 msgstr ""
 
-#: vbht:1339 vbht:1545
+#: vbht:1339 vbht:1556
 msgid "you're neither the capturing virtual machine's owner, nor root!"
 msgstr ""
 
@@ -647,94 +647,83 @@ msgstr ""
 msgid "Dedicated X server : [:useNewX]"
 msgstr ""
 
-#: vbht:1494
+#: vbht:1496
 msgid "no log entry for descriptor \\`${address}'!"
 msgstr ""
 
-#: vbht:1538
+#: vbht:1549
 msgid "forcing option will be ignored for stoppage type \\`:stoppageType'"
 msgstr ""
 
-#: vbht:1549
+#: vbht:1560
 msgid "the capturing virtual machine is not being forwarded ACPI events! -- try forcing"
 msgstr ""
 
-#: vbht:1561
+#: vbht:1572
 msgid "invalid stoppage type! -- \\`:stoppage'"
 msgstr ""
 
-#: vbht:1567
+#: vbht:1578
 msgid "stoppage returned non-zero (:status) status!"
 msgstr ""
 
-#: vbht:1818
+#: vbht:1829
 msgid "VBHT started"
 msgstr ""
 
-#: vbht:1821
+#: vbht:1832
 msgid "no arguments provided!"
 msgstr ""
 
-#: vbht:1827 vbht:1860 vbht:1879 vbht:1936 vbht:1988 vbht:2041 vbht:2104
-msgid "\\`--help' is supposed to be the ONLY argument given!"
+#: vbht:1838 vbht:1846 vbht:1854 vbht:1871 vbht:1890 vbht:1910 vbht:1947
+#: vbht:1965 vbht:1999 vbht:2014 vbht:2052 vbht:2076 vbht:2115 vbht:2136
+msgid "\\`:command' is supposed to be the ONLY argument given!"
 msgstr ""
 
-#: vbht:1835
-msgid "\\`--version' is supposed to be the ONLY argument given!"
-msgstr ""
-
-#: vbht:1843
-msgid "\\`--license' is supposed to be the ONLY argument given!"
-msgstr ""
-
-#: vbht:1852 vbht:1922
+#: vbht:1863 vbht:1933
 msgid "too few arguments!"
 msgstr ""
 
-#: vbht:1899 vbht:1954 vbht:2003 vbht:2065 vbht:2125
-msgid "\\`-h' is supposed to be the ONLY argument given!"
-msgstr ""
-
-#: vbht:1903 vbht:1958 vbht:2007 vbht:2069 vbht:2129
+#: vbht:1914 vbht:1969 vbht:2018 vbht:2080 vbht:2140
 msgid "invalid option at \\`:longOption'! -- \\`:shortOption'"
 msgstr ""
 
-#: vbht:2014 vbht:2136
+#: vbht:2025 vbht:2147
 msgid "invalid option! -- \\`:option'"
 msgstr ""
 
-#: vbht:2144
+#: vbht:2155
 msgid "invalid action! -- \\`:action'"
 msgstr ""
 
-#: vbht:2151
+#: vbht:2162
 msgid "Try \\`:vbhtName start --help' for more information."
 msgstr ""
 
-#: vbht:2152
+#: vbht:2163
 msgid "Try \\`:vbhtName attach --help' for more information."
 msgstr ""
 
-#: vbht:2153
+#: vbht:2164
 msgid "Try \\`:vbhtName info --help' for more information."
 msgstr ""
 
-#: vbht:2154
+#: vbht:2165
 msgid "Try \\`:vbhtName logs --help' for more information."
 msgstr ""
 
-#: vbht:2155
+#: vbht:2166
 msgid "Try \\`:vbhtName stop --help' for more information."
 msgstr ""
 
-#: vbht:2157
+#: vbht:2168
 msgid "Try \\`:vbhtName --help' for more information."
 msgstr ""
 
-#: vbht:2182
+#: vbht:2193
 msgid "something went very wrong! late-unrecognised action: \\`:action'!"
 msgstr ""
 
-#: vbht:2190
+#: vbht:2201
 msgid "Errors were encountered, check logs!!!"
 msgstr ""
